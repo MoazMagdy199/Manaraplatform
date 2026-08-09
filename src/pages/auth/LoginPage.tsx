@@ -158,28 +158,6 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 rounded-xl border border-dashed border-black/15 dark:border-white/15 p-3.5 text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
-            <p className="font-semibold mb-2 text-[var(--color-ink)] dark:text-[var(--color-dark-ink)]">
-              للتجربة السريعة:
-            </p>
-            <div className="flex gap-2">
-              <button
-                onClick={() => fillDemo('teacher')}
-                type="button"
-                className="flex-1 rounded-lg bg-black/5 dark:bg-white/10 px-2 py-1.5 hover:bg-black/10 dark:hover:bg-white/20 font-semibold"
-              >
-                حساب المدرس
-              </button>
-              <button
-                onClick={() => fillDemo('student')}
-                type="button"
-                className="flex-1 rounded-lg bg-black/5 dark:bg-white/10 px-2 py-1.5 hover:bg-black/10 dark:hover:bg-white/20 font-semibold"
-              >
-                حساب طالب
-              </button>
-            </div>
-          </div>
-
           <Link
             to="/"
             className="mt-6 flex items-center justify-center gap-1.5 text-sm text-[var(--color-ink-soft)] hover:text-[var(--color-brand-600)] dark:text-[var(--color-dark-ink-soft)]"
