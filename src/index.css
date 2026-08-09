@@ -1,0 +1,119 @@
+@import "tailwindcss";
+
+/* Tailwind v4 defaults dark: to prefers-color-scheme only. Our ThemeContext
+   toggles a .dark class on <html>, so we opt into class-based dark mode here. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  /* Fonts */
+  --font-display: 'Cairo', 'IBM Plex Sans Arabic', sans-serif;
+  --font-body: 'IBM Plex Sans Arabic', 'Cairo', sans-serif;
+
+  /* Brand palette */
+  --color-ink: #16221F;
+  --color-ink-soft: #3C4A46;
+  --color-paper: #F3F5F1;
+  --color-paper-raised: #FFFFFF;
+
+  --color-brand-50: #E9F5F1;
+  --color-brand-100: #CDE9E1;
+  --color-brand-300: #6FB6A3;
+  --color-brand-500: #0E6B5C;
+  --color-brand-600: #0B5548;
+  --color-brand-700: #094238;
+  --color-brand-900: #062A24;
+
+  --color-amber-100: #FBEACB;
+  --color-amber-300: #F0C670;
+  --color-amber-500: #E3A438;
+  --color-amber-600: #C0862A;
+
+  --color-indigo-300: #A9BAE3;
+  --color-indigo-500: #3B5BA5;
+  --color-indigo-600: #2F4884;
+
+  --color-rose-500: #C25B5B;
+  --color-rose-100: #F5DEDE;
+
+  /* Dark mode surfaces */
+  --color-dark-bg: #0E1613;
+  --color-dark-surface: #16211D;
+  --color-dark-surface-2: #1D2A25;
+  --color-dark-border: #2A3833;
+  --color-dark-ink: #E7EFEC;
+  --color-dark-ink-soft: #9FB2AC;
+
+  --radius-card: 1.1rem;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    font-family: var(--font-body);
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  html.dark body {
+    background-color: var(--color-dark-bg);
+    color: var(--color-dark-ink);
+  }
+
+  h1, h2, h3, h4, .font-display {
+    font-family: var(--font-display);
+  }
+
+  ::selection {
+    background-color: var(--color-amber-300);
+    color: var(--color-ink);
+  }
+
+  *:focus-visible {
+    outline: 2px solid var(--color-brand-500);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-brand-300);
+    border-radius: 999px;
+  }
+  html.dark ::-webkit-scrollbar-thumb {
+    background: var(--color-dark-border);
+  }
+}
+
+@layer utilities {
+  .pattern-star {
+    background-image: radial-gradient(var(--color-brand-300) 1px, transparent 1px);
+    background-size: 22px 22px;
+  }
+
+  .glass-card {
+    background: color-mix(in srgb, var(--color-paper-raised) 88%, transparent);
+    backdrop-filter: blur(10px);
+  }
+
+  .rosette-mask {
+    clip-path: polygon(50% 0%, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+    }
+  }
+}
