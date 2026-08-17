@@ -1,11 +1,23 @@
 import { Outlet, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Users, BookOpen, ClipboardCheck, Sparkles, Award, Megaphone, Settings, User } from 'lucide-react'
+import {
+  LayoutDashboard,
+  Users,
+  BookOpen,
+  ClipboardCheck,
+  Sparkles,
+  Award,
+  Megaphone,
+  Settings,
+  User,
+  CalendarCheck,
+} from 'lucide-react'
 import { DashboardLayout } from './DashboardLayout'
 import type { NavItem } from './Sidebar'
 
 const items: NavItem[] = [
   { to: '/teacher', label: 'الرئيسية', icon: LayoutDashboard, end: true },
   { to: '/teacher/students', label: 'الطلاب', icon: Users },
+  { to: '/teacher/attendance', label: 'الحضور والغياب', icon: CalendarCheck },
   { to: '/teacher/lessons', label: 'الحصص', icon: BookOpen },
   { to: '/teacher/homework', label: 'الواجبات', icon: ClipboardCheck },
   { to: '/teacher/quizzes', label: 'الاختبارات', icon: Sparkles },
@@ -18,6 +30,7 @@ const items: NavItem[] = [
 const titles: Record<string, string> = {
   '/teacher': 'لوحة التحكم',
   '/teacher/students': 'إدارة الطلاب',
+  '/teacher/attendance': 'الحضور والغياب',
   '/teacher/lessons': 'الحصص الدراسية',
   '/teacher/homework': 'الواجبات',
   '/teacher/quizzes': 'الاختبارات',

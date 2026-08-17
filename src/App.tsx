@@ -30,6 +30,7 @@ import AchievementsPage from '@/pages/student/AchievementsPage'
 
 import ProfilePage from '@/pages/shared/ProfilePage'
 import SettingsPage from '@/pages/shared/SettingsPage'
+import AttendancePage from '@/pages/teacher/AttendancePage'
 
 function App() {
   return (
@@ -51,6 +52,7 @@ function App() {
                   }
                 >
                   <Route index element={<TeacherDashboard />} />
+                  <Route path="attendance" element={<AttendancePage />} />
                   <Route path="students" element={<StudentsPage />} />
                   <Route path="lessons" element={<TeacherLessonsPage />} />
                   <Route path="homework" element={<TeacherHomeworkPage />} />

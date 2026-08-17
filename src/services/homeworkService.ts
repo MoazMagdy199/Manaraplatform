@@ -1,5 +1,5 @@
 import { supabase, extractSupabaseError } from '@/lib/supabase'
-import type { Homework, HomeworkSubmission } from '@/types'
+import type { Homework, HomeworkSubmission, MissingStudent } from '@/types'
 
 function mapHomeworkRow(row: any): Homework {
   return {
@@ -8,6 +8,7 @@ function mapHomeworkRow(row: any): Homework {
     lessonTitle: row.lesson?.title || '',
     title: row.title,
     description: row.description,
+    imageUrl: row.image_url,
     deadline: row.deadline,
     maxGrade: row.max_grade,
     createdAt: row.created_at,
@@ -44,6 +45,7 @@ export interface UpsertHomeworkInput {
   lessonId: string
   title: string
   description: string
+  imageUrl?: string | null
   deadline: string
   maxGrade: number
 }
@@ -53,6 +55,7 @@ function toColumns(input: UpsertHomeworkInput) {
     lesson_id: input.lessonId,
     title: input.title,
     description: input.description,
+    image_url: input.imageUrl || null,
     deadline: input.deadline,
     max_grade: input.maxGrade,
   }
@@ -95,9 +98,21 @@ export async function submitHomework(input: { homeworkId: string; answer: string
   const { data: userData } = await supabase.auth.getUser()
   if (!userData.user) throw new Error('يجب تسجيل الدخول أولاً')
 
-  // Determine "late" status by comparing against the homework's deadline
-  const { data: hw } = await supabase.from('homework').select('deadline').eq('id', input.homeworkId).single()
-  const status = hw && new Date(hw.deadline) < new Date() ? 'late' : 'pending'
+  // Get the homework deadline
+  const { data: hw, error: homeworkError } = await supabase
+    .from('homework')
+    .select('deadline')
+    .eq('id', input.homeworkId)
+    .single()
+
+  if (homeworkError) {
+    throw new Error(extractSupabaseError(homeworkError))
+  }
+
+  // Do not allow submission after the deadline
+  if (new Date(hw.deadline) < new Date()) {
+    throw new Error('انتهى موعد تسليم هذا الواجب')
+  }
 
   const { data, error } = await supabase
     .from('homework_submissions')
@@ -106,14 +121,17 @@ export async function submitHomework(input: { homeworkId: string; answer: string
       student_id: userData.user.id,
       answer: input.answer,
       file_urls: input.fileUrls && input.fileUrls.length > 0 ? input.fileUrls : [],
-      status,
+      status: 'pending',
     })
     .select('*, homework:homework(title, max_grade), student:profiles(name)')
     .single()
 
-  if (error) throw new Error(extractSupabaseError(error, 'لقد قمت بتسليم هذا الواجب مسبقاً'))
+  if (error) {
+    throw new Error(
+      extractSupabaseError(error, 'لقد قمت بتسليم هذا الواجب مسبقاً')
+    )
+  }
 
-  // Evaluate badges (e.g. "أول واجب") after every successful submission
   await supabase.rpc('award_badges_for_student')
 
   return mapSubmissionRow(data)
@@ -128,4 +146,11 @@ export async function gradeSubmission(submissionId: string, grade: number, feedb
     .single()
   if (error) throw new Error(extractSupabaseError(error))
   return mapSubmissionRow(data)
+}
+
+/** الطلاب اللي لسه ما سلّموش الواجب ده (مقصورة على نفس صف الحصة تلقائياً) */
+export async function getMissingSubmissions(homeworkId: string): Promise<MissingStudent[]> {
+  const { data, error } = await supabase.rpc('get_missing_submissions', { p_homework_id: homeworkId })
+  if (error) throw new Error(extractSupabaseError(error))
+  return (data || []) as MissingStudent[]
 }

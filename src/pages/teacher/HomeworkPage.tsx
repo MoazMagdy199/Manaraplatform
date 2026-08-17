@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Pencil, Trash2, ClipboardCheck, FileDown } from 'lucide-react'
+import { Plus, Pencil, Trash2, ClipboardCheck, FileDown, Image as ImageIcon, X, UserX } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,9 +18,12 @@ import {
 import { useData } from '@/context/DataContext'
 import { useToast } from '@/context/ToastContext'
 import { formatDate, formatDateTime } from '@/lib/utils'
-import type { Homework, HomeworkSubmission } from '@/types'
+import { uploadFile } from '@/services/filesService'
+import { getMissingSubmissions } from '@/services/homeworkService'
+import { extractSupabaseErrorMessage } from '@/lib/supabase'
+import type { Homework, HomeworkSubmission, MissingStudent } from '@/types'
 
-const emptyForm = { lessonId: '', title: '', description: '', deadline: '', maxGrade: 10 }
+const emptyForm = { lessonId: '', title: '', description: '', imageUrl: '', deadline: '', maxGrade: 10 }
 
 export default function TeacherHomeworkPage() {
   const { homework, lessons, addHomework, updateHomework, removeHomework, submissions, gradeSubmission } = useData()
@@ -29,10 +32,15 @@ export default function TeacherHomeworkPage() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Homework | null>(null)
   const [form, setForm] = useState(emptyForm)
+  const [uploadingImage, setUploadingImage] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Homework | null>(null)
   const [grading, setGrading] = useState<HomeworkSubmission | null>(null)
   const [gradeVal, setGradeVal] = useState('')
   const [feedbackVal, setFeedbackVal] = useState('')
+
+  const [missingFor, setMissingFor] = useState<Homework | null>(null)
+  const [missingList, setMissingList] = useState<MissingStudent[]>([])
+  const [loadingMissing, setLoadingMissing] = useState(false)
 
   function openAdd() {
     setEditing(null)
@@ -42,8 +50,44 @@ export default function TeacherHomeworkPage() {
 
   function openEdit(h: Homework) {
     setEditing(h)
-    setForm({ lessonId: h.lessonId, title: h.title, description: h.description, deadline: h.deadline, maxGrade: h.maxGrade })
+    setForm({
+      lessonId: h.lessonId,
+      title: h.title,
+      description: h.description,
+      imageUrl: h.imageUrl || '',
+      deadline: h.deadline,
+      maxGrade: h.maxGrade,
+    })
     setDialogOpen(true)
+  }
+
+  async function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setUploadingImage(true)
+    try {
+      const uploaded = await uploadFile(file)
+      setForm((f) => ({ ...f, imageUrl: uploaded.url }))
+    } catch (err) {
+      toast({ title: extractSupabaseErrorMessage(err, 'تعذّر رفع الصورة'), variant: 'error' })
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
+  async function openMissing(h: Homework) {
+    setMissingFor(h)
+    setLoadingMissing(true)
+    try {
+      const list = await getMissingSubmissions(h.id)
+      setMissingList(list)
+    } catch (err) {
+      toast({ title: extractSupabaseErrorMessage(err, 'تعذّر تحميل القائمة'), variant: 'error' })
+      setMissingList([])
+    } finally {
+      setLoadingMissing(false)
+    }
   }
 
   async function handleSave() {
@@ -138,8 +182,11 @@ export default function TeacherHomeworkPage() {
                     آخر موعد للتسليم: {formatDate(h.deadline)}
                   </p>
                   <div className="flex items-center gap-2 mt-4 pt-4 border-t border-black/5 dark:border-[var(--color-dark-border)]">
-                    <Button size="sm" variant="outline" className="flex-1" onClick={() => openEdit(h)}>
-                      <Pencil className="h-3.5 w-3.5" /> تعديل
+                    <Button size="sm" variant="outline" className="flex-1" onClick={() => openMissing(h)}>
+                      <UserX className="h-3.5 w-3.5" /> مين لسه ما سلّمش
+                    </Button>
+                    <Button size="sm" variant="outline" onClick={() => openEdit(h)}>
+                      <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     <Button size="sm" variant="ghost" className="hover:text-[var(--color-rose-500)]" onClick={() => setDeleteTarget(h)}>
                       <Trash2 className="h-3.5 w-3.5" />
@@ -221,6 +268,37 @@ export default function TeacherHomeworkPage() {
               <Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
             <div>
+              <Label>صورة السؤال (اختياري — بديل أو إضافة للنص أعلاه)</Label>
+              {form.imageUrl ? (
+                <div className="relative rounded-xl overflow-hidden border border-black/10 dark:border-[var(--color-dark-border)]">
+                  <img src={form.imageUrl} alt="صورة الواجب" className="w-full h-40 object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setForm({ ...form, imageUrl: '' })}
+                    className="absolute top-2 left-2 h-7 w-7 rounded-full bg-black/60 text-white flex items-center justify-center hover:bg-black/80"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              ) : (
+                <label className="flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-black/15 dark:border-white/15 p-5 cursor-pointer hover:bg-black/[0.02] dark:hover:bg-white/5 text-sm text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
+                  {uploadingImage ? (
+                    <span className="h-4 w-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+                  ) : (
+                    <ImageIcon className="h-4 w-4" />
+                  )}
+                  {uploadingImage ? 'جاري الرفع...' : 'اضغط لرفع صورة السؤال'}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingImage}
+                    onChange={handleImageSelect}
+                  />
+                </label>
+              )}
+            </div>
+            <div>
               <Label>موعد التسليم</Label>
               <Input type="date" value={form.deadline} onChange={(e) => setForm({ ...form, deadline: e.target.value })} />
             </div>
@@ -229,7 +307,9 @@ export default function TeacherHomeworkPage() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
               إلغاء
             </Button>
-            <Button onClick={handleSave}>{editing ? 'حفظ التعديلات' : 'إضافة الواجب'}</Button>
+            <Button onClick={handleSave} disabled={uploadingImage}>
+              {editing ? 'حفظ التعديلات' : 'إضافة الواجب'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -298,6 +378,47 @@ export default function TeacherHomeworkPage() {
               إلغاء
             </Button>
             <Button onClick={saveGrade}>حفظ الدرجة</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Missing submissions dialog */}
+      <Dialog open={!!missingFor} onOpenChange={(o) => !o && setMissingFor(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>الطلاب اللي لسه ما سلّموش</DialogTitle>
+            <DialogDescription>{missingFor?.title}</DialogDescription>
+          </DialogHeader>
+          {loadingMissing ? (
+            <div className="flex justify-center py-8">
+              <div className="h-7 w-7 rounded-full border-4 border-[var(--color-brand-500)]/20 border-t-[var(--color-brand-500)] animate-spin" />
+            </div>
+          ) : missingList.length === 0 ? (
+            <div className="text-center py-8 text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
+              <ClipboardCheck className="h-9 w-9 mx-auto opacity-40 mb-2" />
+              كل الطلاب سلّموا الواجب ده 🎉
+            </div>
+          ) : (
+            <div className="space-y-2 max-h-80 overflow-y-auto">
+              {missingList.map((s) => (
+                <div
+                  key={s.id}
+                  className="flex items-center justify-between rounded-xl bg-black/[0.02] dark:bg-white/5 p-3"
+                >
+                  <div>
+                    <p className="font-semibold text-sm">{s.name}</p>
+                    <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
+                      @{s.username}
+                    </p>
+                  </div>
+                  <Badge variant="rose">لم يسلّم</Badge>
+                </div>
+              ))}
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setMissingFor(null)}>
+              إغلاق
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

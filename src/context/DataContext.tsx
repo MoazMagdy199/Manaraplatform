@@ -9,12 +9,14 @@ import type {
   Announcement,
   User,
   StudentGrade,
+  AttendanceSummaryRow,
 } from '@/types'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { extractSupabaseErrorMessage } from '@/lib/supabase'
 
 import * as studentsApi from '@/services/studentsService'
+import * as attendanceApi from '@/services/attendanceService'
 import * as lessonsApi from '@/services/lessonsService'
 import * as homeworkApi from '@/services/homeworkService'
 import * as quizzesApi from '@/services/quizzesService'
@@ -62,7 +64,7 @@ interface DataContextValue {
 
   grades: StudentGrade[]
   updateGrade: (studentId: string, homeworkAvg: number, quizAvg: number) => Promise<void>
-
+  attendanceSummary: AttendanceSummaryRow[]
   refetchAll: () => Promise<void>
 }
 
@@ -82,6 +84,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [quizResults, setQuizResults] = useState<QuizResult[]>([])
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [grades, setGrades] = useState<StudentGrade[]>([])
+  const [attendanceSummary, setAttendanceSummary] = useState<AttendanceSummaryRow[]>([])
 
   const handleError = useCallback(
     (err: unknown, fallback: string) => {
@@ -92,7 +95,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   const loadAll = useCallback(async () => {
     if (!user) {
-      setStudents([]); setLessons([]); setHomework([]); setSubmissions([])
+      setStudents([]); setLessons([]);setAttendanceSummary([]); setHomework([]); setSubmissions([])
       setQuizzes([]); setQuizResults([]); setAnnouncements([]); setGrades([])
       setLoading(false)
       return
@@ -108,15 +111,41 @@ export function DataProvider({ children }: { children: ReactNode }) {
         announcementsApi.fetchAnnouncements().then(setAnnouncements),
       ]
 
-      if (isTeacher) {
-        tasks.push(studentsApi.fetchStudents().then(setStudents))
-        tasks.push(gradesApi.fetchAllGrades().then(setGrades))
-      } else {
-        tasks.push(quizzesApi.fetchMyQuizResults().then(setQuizResults))
-        tasks.push(gradesApi.fetchMyGrade().then((g) => setGrades([g])))
-      }
+     if (isTeacher) {
+  const [studentsData, gradesData] = await Promise.all([
+    studentsApi.fetchStudents(),
+    gradesApi.fetchAllGrades(),
+  ])
 
-      await Promise.all(tasks)
+  setStudents(studentsData)
+  setGrades(gradesData)
+
+  const gradeList = [
+    ...new Set(
+      studentsData
+        .map((student) => student.grade)
+        .filter((grade): grade is string => Boolean(grade)),
+    ),
+  ]
+
+  const summaries = await Promise.all(
+    gradeList.map((grade) => attendanceApi.fetchAttendanceSummary(grade)),
+  )
+
+  setAttendanceSummary(summaries.flat())
+
+} else {
+  tasks.push(quizzesApi.fetchMyQuizResults().then(setQuizResults))
+  tasks.push(gradesApi.fetchMyGrade().then((g) => setGrades([g])))
+
+  tasks.push(
+    attendanceApi.fetchMyAttendanceSummary().then((summary) => {
+      setAttendanceSummary([summary])
+    }),
+  )
+}
+
+await Promise.all(tasks)
     } catch (err) {
       handleError(err, 'تعذّر تحميل بيانات المنصة')
     } finally {
@@ -134,6 +163,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       loading,
 
       students,
+      attendanceSummary,
       addStudent: async (s) => {
         try {
           const created = await studentsApi.createStudent(s)
@@ -332,7 +362,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
       refetchAll: loadAll,
     }),
-    [loading, students, lessons, homework, submissions, quizzes, quizResults, announcements, grades, handleError, loadAll],
+    [loading, students, lessons, homework, submissions, quizzes, quizResults,attendanceSummary, announcements, grades, handleError, loadAll],
   )
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>

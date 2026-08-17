@@ -6,6 +6,7 @@ interface LessonRow {
   title: string
   description: string
   content: string
+  grade: string | null
   pdf_url: string | null
   video_url: string | null
   image_url: string | null
@@ -19,6 +20,7 @@ function mapLesson(r: LessonRow, completed?: boolean): Lesson {
     title: r.title,
     description: r.description,
     content: r.content,
+    grade: r.grade ?? undefined,
     pdfUrl: r.pdf_url ?? undefined,
     videoUrl: r.video_url ?? undefined,
     imageUrl: r.image_url ?? undefined,
@@ -51,6 +53,7 @@ export interface UpsertLessonInput {
   title: string
   description: string
   content: string
+  grade?: string
   pdfUrl?: string
   videoUrl?: string
   imageUrl?: string
@@ -61,6 +64,7 @@ function toRow(input: UpsertLessonInput) {
     title: input.title,
     description: input.description,
     content: input.content,
+    grade: input.grade || null,
     pdf_url: input.pdfUrl || null,
     video_url: input.videoUrl || null,
     image_url: input.imageUrl || null,

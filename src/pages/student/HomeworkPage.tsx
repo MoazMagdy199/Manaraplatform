@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ClipboardCheck, Clock, CheckCircle2, Upload, Star, X, Paperclip } from 'lucide-react'
+import { ClipboardCheck, Clock, CheckCircle2, Upload, Star, X, Paperclip, Image as ImageIcon } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
@@ -132,18 +132,27 @@ export default function StudentHomeworkPage() {
                       )}
                       {sub?.status === 'pending' && <Badge variant="amber">بانتظار التصحيح</Badge>}
                       {overdue && <Badge variant="rose">انتهى الموعد</Badge>}
+                      {h.imageUrl && (
+                        <Badge variant="indigo">
+                          <ImageIcon className="h-3 w-3" /> يحتوي صورة
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 </div>
                 {sub ? (
-                  <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--color-brand-600)] dark:text-[var(--color-brand-300)] shrink-0">
-                    <CheckCircle2 className="h-4 w-4" /> تم التسليم
-                  </div>
-                ) : (
-                  <Button size="sm" onClick={() => openSubmit(h)} className="shrink-0">
-                    <Upload className="h-4 w-4" /> تسليم الواجب
-                  </Button>
-                )}
+  <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--color-brand-600)] dark:text-[var(--color-brand-300)] shrink-0">
+    <CheckCircle2 className="h-4 w-4" /> تم التسليم
+  </div>
+) : overdue ? (
+  <div className="flex items-center gap-1.5 text-sm font-semibold text-[var(--color-rose-500)] shrink-0">
+    <Clock className="h-4 w-4" /> انتهى موعد التسليم
+  </div>
+) : (
+  <Button size="sm" onClick={() => openSubmit(h)} className="shrink-0">
+    <Upload className="h-4 w-4" /> تسليم الواجب
+  </Button>
+)}
               </CardContent>
               {sub?.feedback && (
                 <CardContent className="p-5 pt-0">
@@ -166,6 +175,13 @@ export default function StudentHomeworkPage() {
             <DialogTitle>{target?.title}</DialogTitle>
             <DialogDescription>{target?.description}</DialogDescription>
           </DialogHeader>
+          {target?.imageUrl && (
+            <img
+              src={target.imageUrl}
+              alt="صورة سؤال الواجب"
+              className="w-full max-h-64 object-contain rounded-xl border border-black/10 dark:border-[var(--color-dark-border)] bg-black/[0.02] dark:bg-white/5"
+            />
+          )}
           <div className="space-y-4">
             <div>
               <Label>إجابتك</Label>

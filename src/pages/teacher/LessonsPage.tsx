@@ -19,7 +19,7 @@ import { useToast } from '@/context/ToastContext'
 import { formatDate } from '@/lib/utils'
 import type { Lesson } from '@/types'
 
-const emptyForm = { title: '', description: '', content: '', pdfUrl: '', videoUrl: '', imageUrl: '' }
+const emptyForm = { title: '', description: '', content: '',grade: '', pdfUrl: '', videoUrl: '', imageUrl: '' }
 
 export default function TeacherLessonsPage() {
   const { lessons, addLesson, updateLesson, removeLesson } = useData()
@@ -42,6 +42,7 @@ export default function TeacherLessonsPage() {
       title: l.title,
       description: l.description,
       content: l.content,
+      grade: l.grade || '',
       pdfUrl: l.pdfUrl || '',
       videoUrl: l.videoUrl || '',
       imageUrl: l.imageUrl || '',
@@ -106,6 +107,9 @@ export default function TeacherLessonsPage() {
               )}
               <CardContent className="p-5 flex flex-col flex-1">
                 <h3 className="font-display font-bold text-lg leading-snug">{l.title}</h3>
+                <span className="inline-flex w-fit mt-2 rounded-full bg-[var(--color-brand-50)] dark:bg-[var(--color-brand-900)]/40 px-2.5 py-1 text-xs font-semibold text-[var(--color-brand-600)] dark:text-[var(--color-brand-300)]">
+  {l.grade || 'كل الصفوف'}
+</span>
                 <p className="text-sm text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1.5 line-clamp-2 flex-1">
                   {l.description}
                 </p>
@@ -145,6 +149,18 @@ export default function TeacherLessonsPage() {
               <Label>وصف مختصر</Label>
               <Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
+            <div>
+  <Label>الصف الدراسي</Label>
+  <select
+    value={form.grade}
+    onChange={(e) => setForm({ ...form, grade: e.target.value })}
+    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+  >
+    <option value="">كل الصفوف</option>
+<option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+<option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+  </select>
+</div>
             <div>
               <Label>الشرح الكامل</Label>
               <RichTextEditor value={form.content} onChange={(html) => setForm({ ...form, content: html })} placeholder="اكتب شرح الحصة بالتفصيل..." />

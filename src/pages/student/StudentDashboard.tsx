@@ -1,14 +1,22 @@
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, ClipboardCheck, Megaphone, ArrowLeft, Award } from 'lucide-react'
+import { BookOpen, ClipboardCheck, Megaphone, ArrowLeft, Award, CalendarCheck } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/context/AuthContext'
 import { useData } from '@/context/DataContext'
 import { timeAgo, formatDate } from '@/lib/utils'
+import { fetchMyAttendanceSummary } from '@/services/attendanceService'
 
 export default function StudentDashboard() {
   const { user } = useAuth()
   const { lessons, homework, announcements, grades, quizResults } = useData()
+  const [attendance, setAttendance] = useState<Awaited<ReturnType<typeof fetchMyAttendanceSummary>> | null>(null)
+  useEffect(() => {
+  fetchMyAttendanceSummary()
+    .then(setAttendance)
+    .catch(() => setAttendance(null))
+}, [])
 
   const latestLesson = lessons[lessons.length - 1]
   const latestHomework = homework[0]
@@ -128,7 +136,49 @@ export default function StudentDashboard() {
             </Link>
           </CardContent>
         </Card>
+<Card>
+  <CardContent className="p-6">
+    <div className="flex items-center justify-between mb-4">
+      <h3 className="font-display font-bold text-lg">الحضور والغياب</h3>
+      <CalendarCheck className="h-5 w-5 text-[var(--color-brand-500)]" />
+    </div>
 
+    {attendance ? (
+      <div className="grid grid-cols-3 gap-3 text-center">
+        <div className="rounded-xl bg-black/[0.02] dark:bg-white/5 p-4">
+          <p className="font-display text-2xl font-extrabold text-[var(--color-brand-600)]">
+            {attendance.attendancePercentage}%
+          </p>
+          <p className="text-xs text-[var(--color-ink-soft)] mt-1">
+            نسبة الحضور
+          </p>
+        </div>
+
+        <div className="rounded-xl bg-black/[0.02] dark:bg-white/5 p-4">
+          <p className="font-display text-2xl font-extrabold text-[var(--color-amber-600)]">
+           {attendance.absentCount}
+          </p>
+          <p className="text-xs text-[var(--color-ink-soft)] mt-1">
+            أيام الغياب
+          </p>
+        </div>
+
+        <div className="rounded-xl bg-black/[0.02] dark:bg-white/5 p-4">
+          <p className="font-display text-2xl font-extrabold">
+            {attendance.totalCount}
+          </p>
+          <p className="text-xs text-[var(--color-ink-soft)] mt-1">
+            إجمالي الحصص
+          </p>
+        </div>
+      </div>
+    ) : (
+      <p className="text-sm text-[var(--color-ink-soft)]">
+        لا توجد بيانات حضور مسجلة بعد
+      </p>
+    )}
+  </CardContent>
+</Card>
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center justify-between mb-4">
