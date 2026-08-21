@@ -44,3 +44,19 @@ export async function fetchPaymentsOverview(month: string): Promise<PaymentsOver
     paidStudents: Number(r.paid_students),
   }))
 }
+export async function fetchMyPaymentStatus(month: string): Promise<boolean> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+  if (!user) return false
+
+  const { data, error } = await supabase
+    .from('payments')
+    .select('paid')
+    .eq('student_id', user.id)
+    .eq('month', month)
+    .maybeSingle()
+
+  if (error) throw new Error(extractSupabaseError(error))
+  return data?.paid ?? false
+}

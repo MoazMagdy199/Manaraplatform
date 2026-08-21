@@ -4,6 +4,7 @@ import { BookOpen, ClipboardCheck, Megaphone, ArrowLeft, Award, CalendarCheck } 
 import { Card, CardContent } from '@/components/ui/card'
 import { Progress } from '@/components/ui/progress'
 import { useAuth } from '@/context/AuthContext'
+import { SubscriptionBanner } from '@/components/shared/SubscriptionBanner'
 import { useData } from '@/context/DataContext'
 import { timeAgo, formatDate } from '@/lib/utils'
 import { fetchMyAttendanceSummary } from '@/services/attendanceService'
@@ -28,6 +29,7 @@ export default function StudentDashboard() {
 
   return (
     <div className="space-y-8">
+      <SubscriptionBanner />
       <div className="rounded-2xl bg-gradient-to-l from-[var(--color-brand-600)] to-[var(--color-brand-500)] p-7 text-white relative overflow-hidden">
         <div className="absolute inset-0 pattern-star opacity-[0.1]" />
         <div className="relative">
