@@ -150,3 +150,18 @@ export interface ScheduleDay {
   dayOfWeek: number
   label?: string | null
 }
+export interface PaymentRow {
+  studentId: string
+  name: string
+  username: string
+  paid: boolean
+  amount: number | null
+  paidAt: string | null
+  notes: string | null
+}
+
+export interface PaymentsOverviewRow {
+  grade: string
+  totalStudents: number
+  paidStudents: number
+}

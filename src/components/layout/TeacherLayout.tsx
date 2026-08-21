@@ -10,6 +10,7 @@ import {
   Settings,
   User,
   CalendarCheck,
+  Wallet,
 } from 'lucide-react'
 import { DashboardLayout } from './DashboardLayout'
 import type { NavItem } from './Sidebar'
@@ -21,6 +22,7 @@ const items: NavItem[] = [
   { to: '/teacher/lessons', label: 'الحصص', icon: BookOpen },
   { to: '/teacher/homework', label: 'الواجبات', icon: ClipboardCheck },
   { to: '/teacher/quizzes', label: 'الاختبارات', icon: Sparkles },
+  { to: '/teacher/payments', label: 'الاشتراكات', icon: Wallet },
   { to: '/teacher/grades', label: 'الدرجات', icon: Award },
   { to: '/teacher/announcements', label: 'الإعلانات', icon: Megaphone },
   { to: '/teacher/profile', label: 'الملف الشخصي', icon: User },
@@ -34,6 +36,7 @@ const titles: Record<string, string> = {
   '/teacher/lessons': 'الحصص الدراسية',
   '/teacher/homework': 'الواجبات',
   '/teacher/quizzes': 'الاختبارات',
+  '/teacher/payments': 'متابعة الاشتراك الشهري',
   '/teacher/grades': 'الدرجات',
   '/teacher/announcements': 'الإعلانات',
   '/teacher/profile': 'الملف الشخصي',
