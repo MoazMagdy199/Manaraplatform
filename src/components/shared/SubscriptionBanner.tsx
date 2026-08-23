@@ -28,12 +28,18 @@ export function SubscriptionBanner() {
 
   useEffect(() => {
     if (!user || user.role !== 'Student') return
+
     fetchMyPaymentStatus(currentMonthValue())
       .then(setPaid)
-      .catch(() => setPaid(null)) // في حالة الخطأ، لا نعرض البانر لتجنب تنبيه غير دقيق
+      .catch(() => setPaid(null))
   }, [user])
 
   if (!user || user.role !== 'Student') return null
+
+  // لا تظهر رسالة عدم الدفع قبل يوم 28 من الشهر
+  const today = new Date().getDate()
+  if (today < 28) return null
+
   if (paid === null || paid === true) return null
 
   return (
