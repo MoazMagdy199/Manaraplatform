@@ -120,5 +120,23 @@ export async function submitQuiz(quizId: string, answers: Record<string, 'A' | '
     answers,
   }
 }
+/** كل نتائج كل الطلاب في كل الاختبارات — للمدرس فقط (الصلاحية متحققة عبر RLS تلقائياً) */
+export async function fetchAllQuizResults(): Promise<QuizResult[]> {
+  const { data, error } = await supabase
+    .from('quiz_results')
+    .select('*, quiz_answers(quiz_question_id, selected_answer)')
+  if (error) throw new Error(extractSupabaseError(error))
 
+  return (data || []).map((row: any) => ({
+    id: row.id,
+    quizId: row.quiz_id,
+    studentId: row.student_id,
+    score: row.score,
+    maxScore: row.max_score,
+    submittedAt: row.submitted_at,
+    answers: Object.fromEntries(
+      (row.quiz_answers || []).map((a: any) => [a.quiz_question_id, a.selected_answer]),
+    ),
+  }))
+}
 export type { Quiz }

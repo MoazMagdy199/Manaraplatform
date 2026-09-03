@@ -112,9 +112,12 @@ export function DataProvider({ children }: { children: ReactNode }) {
       ]
 
      if (isTeacher) {
+      const allResults = await quizzesApi.fetchAllQuizResults()
+setQuizResults(allResults)
   const [studentsData, gradesData] = await Promise.all([
     studentsApi.fetchStudents(),
     gradesApi.fetchAllGrades(),
+    
   ])
 
   setStudents(studentsData)
