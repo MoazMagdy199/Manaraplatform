@@ -14,6 +14,7 @@ import StudentsPage from '@/pages/teacher/StudentsPage'
 import TeacherLessonsPage from '@/pages/teacher/LessonsPage'
 import TeacherHomeworkPage from '@/pages/teacher/HomeworkPage'
 import TeacherQuizzesPage from '@/pages/teacher/QuizzesPage'
+import TeacherWeeklyReportPage from '@/pages/teacher/WeeklyReportPage'
 import TeacherPaymentsPage from '@/pages/teacher/PaymentsPage'
 import TeacherGradesPage from '@/pages/teacher/GradesPage'
 import TeacherAnnouncementsPage from '@/pages/teacher/AnnouncementsPage'
@@ -58,6 +59,7 @@ function App() {
                   <Route path="lessons" element={<TeacherLessonsPage />} />
                   <Route path="homework" element={<TeacherHomeworkPage />} />
                   <Route path="quizzes" element={<TeacherQuizzesPage />} />
+                  <Route path="weekly-report" element={<TeacherWeeklyReportPage />} />
                   <Route path="payments" element={<TeacherPaymentsPage />} />
                   <Route path="grades" element={<TeacherGradesPage />} />
                   <Route path="announcements" element={<TeacherAnnouncementsPage />} />
