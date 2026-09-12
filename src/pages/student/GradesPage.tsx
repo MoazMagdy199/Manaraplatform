@@ -1,100 +1,114 @@
-import { BookMarked, Sparkles, Trophy } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { Award, TrendingUp } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
-import { useData } from '@/context/DataContext'
-import { useAuth } from '@/context/AuthContext'
+import { Badge } from '@/components/ui/badge'
+import { useToast } from '@/context/ToastContext'
+import { formatDate } from '@/lib/utils'
+import { fetchMyExamResults, type MyExamResult } from '@/services/examsService'
 
 export default function StudentGradesPage() {
-  const { user } = useAuth()
-  const { grades, submissions, quizResults, homework, quizzes } = useData()
+  const { toast } = useToast()
+  const [results, setResults] = useState<MyExamResult[]>([])
+  const [loading, setLoading] = useState(true)
 
-  const myGrade = grades.find((g) => g.studentId === user?.id)
-  const myHomeworkSubs = submissions.filter((s) => s.studentId === user?.id)
-  const myQuizResults = quizResults.filter((r) => r.studentId === user?.id)
+  useEffect(() => {
+    fetchMyExamResults()
+      .then(setResults)
+      .catch((err) => toast({ title: err instanceof Error ? err.message : 'تعذّر تحميل الدرجات', variant: 'error' }))
+      .finally(() => setLoading(false))
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const scoredResults = results.filter((r) => r.score !== null)
+  const overallPct =
+    scoredResults.length > 0
+      ? Math.round(
+          (scoredResults.reduce((sum, r) => sum + (r.score! / r.maxScore) * 100, 0) / scoredResults.length),
+        )
+      : null
 
   return (
     <div className="space-y-6">
       <div>
         <h2 className="font-display text-2xl font-extrabold">درجاتي</h2>
         <p className="text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1 text-sm">
-          تابع أداءك في الواجبات والاختبارات
+          نتائجك في كل الامتحانات
         </p>
       </div>
 
-      {myGrade && (
-        <div className="grid grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-5 text-center">
-              <BookMarked className="h-6 w-6 text-[var(--color-brand-500)] mx-auto mb-2" />
-              <p className="font-display text-2xl font-extrabold">{myGrade.homeworkAvg}%</p>
-              <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1">
-                معدل الواجبات
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-5 text-center">
-              <Sparkles className="h-6 w-6 text-[var(--color-amber-600)] mx-auto mb-2" />
-              <p className="font-display text-2xl font-extrabold">{myGrade.quizAvg}%</p>
-              <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1">
-                معدل الاختبارات
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-5 text-center">
-              <Trophy className="h-6 w-6 text-[var(--color-rose-500)] mx-auto mb-2" />
-              <p className="font-display text-2xl font-extrabold">{myGrade.overall}%</p>
-              <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1">
-                المعدل العام
-              </p>
-            </CardContent>
-          </Card>
-        </div>
+      {overallPct !== null && (
+        <Card className="bg-gradient-to-l from-[var(--color-brand-600)] to-[var(--color-brand-500)] border-0 text-white">
+          <CardContent className="p-6 flex items-center gap-4">
+            <TrendingUp className="h-9 w-9 text-[var(--color-amber-300)]" />
+            <div>
+              <p className="font-display text-2xl font-extrabold">{overallPct}%</p>
+              <p className="text-white/80 text-sm mt-0.5">متوسط نسبتك في {scoredResults.length} امتحان</p>
+            </div>
+          </CardContent>
+        </Card>
       )}
 
-      <Card>
-        <CardContent className="p-6">
-          <h3 className="font-display font-bold text-lg mb-4">درجات الواجبات</h3>
-          <div className="space-y-2.5">
-            {myHomeworkSubs.length === 0 && (
-              <p className="text-sm text-[var(--color-ink-soft)] py-4 text-center">لا توجد واجبات مسلَّمة بعد</p>
-            )}
-            {myHomeworkSubs.map((s) => {
-              const hw = homework.find((h) => h.id === s.homeworkId)
-              return (
-                <div key={s.id} className="flex items-center justify-between rounded-xl bg-black/[0.02] dark:bg-white/5 p-3.5">
-                  <span className="text-sm font-semibold">{hw?.title}</span>
-                  <span className="text-sm font-bold">
-                    {s.grade !== null ? `${s.grade}/${s.maxGrade}` : 'قيد التصحيح'}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
+      {loading ? (
+        <div className="flex justify-center py-20">
+          <div className="h-8 w-8 rounded-full border-4 border-[var(--color-brand-500)]/20 border-t-[var(--color-brand-500)] animate-spin" />
+        </div>
+      ) : results.length === 0 ? (
+        <Card>
+          <CardContent className="p-14 text-center text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
+            <Award className="h-10 w-10 mx-auto opacity-40 mb-3" />
+            لا توجد امتحانات مسجّلة بعد
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-4">
+          {results.map((r) => {
+            const pct = r.score !== null ? Math.round((r.score / r.maxScore) * 100) : null
+            const missing = r.score !== null ? r.maxScore - r.score : null
+            return (
+              <Card key={r.examId}>
+                <CardContent className="p-5">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <h3 className="font-display font-bold">{r.title}</h3>
+                      <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1">
+                        {formatDate(r.examDate)}
+                      </p>
+                    </div>
+                    {r.score === null ? (
+                      <Badge variant="amber">لسه ما اتصححش</Badge>
+                    ) : (
+                      <Badge variant={pct! >= 50 ? 'success' : 'rose'}>
+                        {r.score} / {r.maxScore}
+                      </Badge>
+                    )}
+                  </div>
 
-      <Card>
-        <CardContent className="p-6">
-          <h3 className="font-display font-bold text-lg mb-4">درجات الاختبارات</h3>
-          <div className="space-y-2.5">
-            {myQuizResults.length === 0 && (
-              <p className="text-sm text-[var(--color-ink-soft)] py-4 text-center">لم تخض أي اختبار بعد</p>
-            )}
-            {myQuizResults.map((r) => {
-              const quiz = quizzes.find((q) => q.id === r.quizId)
-              return (
-                <div key={r.id} className="flex items-center justify-between rounded-xl bg-black/[0.02] dark:bg-white/5 p-3.5">
-                  <span className="text-sm font-semibold">{quiz?.title}</span>
-                  <span className="text-sm font-bold">
-                    {r.score}/{r.maxScore}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
+                  {r.score !== null && (
+                    <div className="grid grid-cols-2 gap-3 mt-4">
+                      <div className="rounded-xl bg-black/[0.02] dark:bg-white/5 p-3 text-center">
+                        <p className="font-display text-xl font-extrabold text-[var(--color-brand-600)] dark:text-[var(--color-brand-300)]">
+                          {pct}%
+                        </p>
+                        <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-0.5">
+                          النسبة
+                        </p>
+                      </div>
+                      <div className="rounded-xl bg-black/[0.02] dark:bg-white/5 p-3 text-center">
+                        <p className="font-display text-xl font-extrabold">
+                          {missing! > 0 ? missing : '—'}
+                        </p>
+                        <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-0.5">
+                          الدرجة الناقصة
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })}
+        </div>
+      )}
     </div>
   )
 }
