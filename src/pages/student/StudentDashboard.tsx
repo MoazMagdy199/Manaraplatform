@@ -19,7 +19,7 @@ export default function StudentDashboard() {
     .catch(() => setAttendance(null))
 }, [])
 
-  const latestLesson = lessons[lessons.length - 1]
+  const latestLesson = lessons[0]
   const latestHomework = homework[0]
   const latestAnnouncement = announcements[0]
   const myGrade = grades.find((g) => g.studentId === user?.id)

@@ -124,9 +124,9 @@ export default function LandingPage() {
                 </div>
                 <div className="space-y-3">
                   {[
-                    { icon: CheckCircle2, text: 'المعادلات التفاضلية', done: true },
-                    { icon: CheckCircle2, text: 'قوانين نيوتن للحركة', done: true },
-                    { icon: BookOpen, text: 'التفاعلات الكيميائية', done: false },
+                    { icon: CheckCircle2, text: 'اخلاقيات المعلومات', done: true },
+                    { icon: CheckCircle2, text: 'تكنولوجيا المعلومات  ', done: true },
+                    { icon: BookOpen, text: ' تقنيات التشفير', done: false },
                   ].map((row) => (
                     <div
                       key={row.text}
