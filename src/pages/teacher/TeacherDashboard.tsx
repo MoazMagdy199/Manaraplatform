@@ -23,7 +23,9 @@ export default function TeacherDashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="font-display text-2xl font-extrabold">أهلاً بك، {user?.name?.split(' ')[0] || 'أستاذنا'} 👋</h2>
+        <h2 className="font-display text-2xl font-extrabold">
+  أهلاً بك، {(user?.name?.split(' ').slice(0, 2).join(' ')) || 'أستاذنا'} 👋
+</h2>
         <p className="text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1">
           إليك ملخص سريع عن نشاط منصتك اليوم
         </p>
