@@ -11,6 +11,7 @@ import LoginPage from '@/pages/auth/LoginPage'
 import { TeacherLayout } from '@/components/layout/TeacherLayout'
 import TeacherDashboard from '@/pages/teacher/TeacherDashboard'
 import StudentsPage from '@/pages/teacher/StudentsPage'
+import StudentProfilePage from '@/pages/teacher/StudentProfilePage'
 import TeacherLessonsPage from '@/pages/teacher/LessonsPage'
 import TeacherHomeworkPage from '@/pages/teacher/HomeworkPage'
 import TeacherQuizzesPage from '@/pages/teacher/QuizzesPage'
@@ -60,6 +61,7 @@ function App() {
                   <Route path="homework" element={<TeacherHomeworkPage />} />
                   <Route path="quizzes" element={<TeacherQuizzesPage />} />
                   <Route path="weekly-report" element={<TeacherWeeklyReportPage />} />
+                  <Route path="students/:id" element={<StudentProfilePage />} />
                   <Route path="payments" element={<TeacherPaymentsPage />} />
                   <Route path="grades" element={<TeacherGradesPage />} />
                   <Route path="announcements" element={<TeacherAnnouncementsPage />} />

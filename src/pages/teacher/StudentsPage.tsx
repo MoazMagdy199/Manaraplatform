@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Link } from 'react-router-dom'
 import {
   Dialog,
   DialogContent,
@@ -151,7 +152,7 @@ export default function StudentsPage() {
                           <AvatarFallback className="text-xs">{initials(s.name)}</AvatarFallback>
                         </Avatar>
                         <div>
-                          <p className="font-semibold">{s.name}</p>
+                          <Link to={`/teacher/students/${s.id}`} className="font-semibold hover:text-[var(--color-brand-600)] hover:underline">{s.name}</Link>
                           <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
                             @{s.username}
                           </p>
