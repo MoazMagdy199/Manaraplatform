@@ -19,6 +19,7 @@ import TeacherWeeklyReportPage from '@/pages/teacher/WeeklyReportPage'
 import TeacherPaymentsPage from '@/pages/teacher/PaymentsPage'
 import TeacherGradesPage from '@/pages/teacher/GradesPage'
 import TeacherAnnouncementsPage from '@/pages/teacher/AnnouncementsPage'
+import GroupsPage from '@/pages/teacher/GroupsPage'
 
 import { StudentLayout } from '@/components/layout/StudentLayout'
 import StudentDashboard from '@/pages/student/StudentDashboard'
@@ -67,6 +68,7 @@ function App() {
                   <Route path="announcements" element={<TeacherAnnouncementsPage />} />
                   <Route path="profile" element={<ProfilePage />} />
                   <Route path="settings" element={<SettingsPage />} />
+                  <Route path="groups" element={<GroupsPage />} />
                 </Route>
 
                 <Route

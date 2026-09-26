@@ -10,6 +10,7 @@ import {
   FileBarChart,
   Settings,
   User,
+  Layers,
   CalendarCheck,
   Wallet,
 } from 'lucide-react'
@@ -27,6 +28,7 @@ const items: NavItem[] = [
   { to: '/teacher/weekly-report', label: 'التقرير الأسبوعي', icon: FileBarChart },
   { to: '/teacher/grades', label: 'الدرجات', icon: Award },
   { to: '/teacher/announcements', label: 'الإعلانات', icon: Megaphone },
+  { to: '/teacher/groups', label: 'المجموعات', icon: Layers },
   { to: '/teacher/profile', label: 'الملف الشخصي', icon: User },
   { to: '/teacher/settings', label: 'الإعدادات', icon: Settings },
 ]
@@ -43,6 +45,7 @@ const titles: Record<string, string> = {
   '/teacher/grades': 'الدرجات',
   '/teacher/announcements': 'الإعلانات',
   '/teacher/profile': 'الملف الشخصي',
+  '/teacher/groups': 'المجموعات',
   '/teacher/settings': 'الإعدادات',
 }
 

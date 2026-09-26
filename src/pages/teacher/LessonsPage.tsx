@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Plus, Pencil, Trash2, Video, FileText, Image as ImageIcon, Paperclip, BookOpen } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -17,9 +17,10 @@ import { RichTextEditor } from '@/components/shared/RichTextEditor'
 import { useData } from '@/context/DataContext'
 import { useToast } from '@/context/ToastContext'
 import { formatDate } from '@/lib/utils'
+import { fetchGroups, type Group } from '@/services/groupsService'
 import type { Lesson } from '@/types'
 
-const emptyForm = { title: '', description: '', content: '',grade: '', pdfUrl: '', videoUrl: '', imageUrl: '' }
+const emptyForm = { title: '', description: '', content: '', grade: '', groupId: null as string | null, pdfUrl: '', videoUrl: '', imageUrl: '' }
 
 export default function TeacherLessonsPage() {
   const { lessons, addLesson, updateLesson, removeLesson } = useData()
@@ -29,6 +30,13 @@ export default function TeacherLessonsPage() {
   const [editing, setEditing] = useState<Lesson | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [deleteTarget, setDeleteTarget] = useState<Lesson | null>(null)
+  const [groups, setGroups] = useState<Group[]>([])
+
+  useEffect(() => {
+    fetchGroups()
+      .then(setGroups)
+      .catch(() => setGroups([]))
+  }, [])
 
   function openAdd() {
     setEditing(null)
@@ -43,6 +51,7 @@ export default function TeacherLessonsPage() {
       description: l.description,
       content: l.content,
       grade: l.grade || '',
+      groupId: l.groupId || null,
       pdfUrl: l.pdfUrl || '',
       videoUrl: l.videoUrl || '',
       imageUrl: l.imageUrl || '',
@@ -150,17 +159,30 @@ export default function TeacherLessonsPage() {
               <Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
             <div>
-  <Label>الصف الدراسي</Label>
-  <select
-    value={form.grade}
-    onChange={(e) => setForm({ ...form, grade: e.target.value })}
-    className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
-  >
-    <option value="">كل الصفوف</option>
-<option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
-<option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
-  </select>
-</div>
+              <Label>الصف الدراسي</Label>
+              <select
+                value={form.grade}
+                onChange={(e) => setForm({ ...form, grade: e.target.value })}
+                className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+              >
+                <option value="">كل الصفوف</option>
+                <option value="الصف الأول الثانوي">الصف الأول الثانوي</option>
+                <option value="الصف الثاني الثانوي">الصف الثاني الثانوي</option>
+              </select>
+            </div>
+            <div>
+              <Label>المجموعة (اختياري — لو فاضي، الحصة تتبع الصف الدراسي العادي)</Label>
+              <select
+                value={form.groupId || ''}
+                onChange={(e) => setForm({ ...form, groupId: e.target.value || null })}
+                className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
+              >
+                <option value="">بدون مجموعة (يتبع الصف)</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            </div>
             <div>
               <Label>الشرح الكامل</Label>
               <RichTextEditor value={form.content} onChange={(html) => setForm({ ...form, content: html })} placeholder="اكتب شرح الحصة بالتفصيل..." />

@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Search, Plus, Pencil, Trash2, KeyRound, GraduationCap } from 'lucide-react'
+import { useMemo, useState, useEffect } from 'react'
+import { Search, Plus, Pencil, Trash2, KeyRound, GraduationCap, Layers } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,11 +17,20 @@ import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useData } from '@/context/DataContext'
 import { useToast } from '@/context/ToastContext'
 import { initials } from '@/lib/utils'
+import { fetchGroups, type Group } from '@/services/groupsService'
 import type { User } from '@/types'
 
 const grades = ['الصف الأول الثانوي', 'الصف الثاني الثانوي', 'الصف الثالث الثانوي']
 
-const emptyForm = { name: '', username: '', password: '', phone: '', email: '', grade: grades[0] }
+const emptyForm = {
+  name: '',
+  username: '',
+  password: '',
+  phone: '',
+  email: '',
+  grade: grades[0],
+  groupId: null as string | null,
+}
 
 export default function StudentsPage() {
   const { students, addStudent, updateStudent, removeStudent, resetPassword } = useData()
@@ -32,6 +41,13 @@ export default function StudentsPage() {
   const [editing, setEditing] = useState<User | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
+  const [groups, setGroups] = useState<Group[]>([])
+
+  useEffect(() => {
+    fetchGroups()
+      .then(setGroups)
+      .catch(() => setGroups([]))
+  }, [])
 
   const filtered = useMemo(
     () =>
@@ -50,7 +66,15 @@ export default function StudentsPage() {
 
   function openEdit(s: User) {
     setEditing(s)
-    setForm({ name: s.name, username: s.username, password: '', phone: s.phone, email: s.email, grade: s.grade || grades[0] })
+    setForm({
+      name: s.name,
+      username: s.username,
+      password: '',
+      phone: s.phone,
+      email: s.email,
+      grade: s.grade || grades[0],
+      groupId: s.groupId || null,
+    })
     setDialogOpen(true)
   }
 
@@ -67,6 +91,7 @@ export default function StudentsPage() {
           email: form.email,
           phone: form.phone,
           grade: form.grade,
+          groupId: form.groupId,
           newPassword: form.password || undefined,
         })
         toast({ title: 'تم تحديث بيانات الطالب بنجاح', variant: 'success' })
@@ -81,6 +106,7 @@ export default function StudentsPage() {
           email: form.email,
           phone: form.phone,
           grade: form.grade,
+          groupId: form.groupId,
           password: form.password,
         })
         toast({ title: 'تمت إضافة الطالب بنجاح', variant: 'success' })
@@ -111,6 +137,12 @@ export default function StudentsPage() {
     }
   }
 
+  // دالة مساعدة لعرض اسم المجموعة
+  function groupName(id?: string | null) {
+    if (!id) return null
+    return groups.find((g) => g.id === id)?.name || null
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -138,6 +170,7 @@ export default function StudentsPage() {
                 <tr className="border-b border-black/5 dark:border-[var(--color-dark-border)] text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
                   <th className="text-right font-semibold p-4">الطالب</th>
                   <th className="text-right font-semibold p-4 hidden md:table-cell">الصف</th>
+                  <th className="text-right font-semibold p-4 hidden xl:table-cell">المجموعة</th>
                   <th className="text-right font-semibold p-4 hidden lg:table-cell">البريد الإلكتروني</th>
                   <th className="text-right font-semibold p-4 hidden sm:table-cell">الهاتف</th>
                   <th className="text-right font-semibold p-4">إجراءات</th>
@@ -164,6 +197,15 @@ export default function StudentsPage() {
                         <GraduationCap className="h-3.5 w-3.5" /> {s.grade}
                       </span>
                     </td>
+                    <td className="p-4 hidden xl:table-cell text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
+                      {groupName(s.groupId) ? (
+                        <span className="inline-flex items-center gap-1.5">
+                          <Layers className="h-3.5 w-3.5" /> {groupName(s.groupId)}
+                        </span>
+                      ) : (
+                        <span className="text-xs opacity-50">—</span>
+                      )}
+                    </td>
                     <td className="p-4 hidden lg:table-cell text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">{s.email}</td>
                     <td className="p-4 hidden sm:table-cell text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]" dir="ltr">
                       {s.phone}
@@ -185,7 +227,7 @@ export default function StudentsPage() {
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="p-10 text-center text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
+                    <td colSpan={6} className="p-10 text-center text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
                       لا توجد نتائج مطابقة للبحث
                     </td>
                   </tr>
@@ -235,6 +277,19 @@ export default function StudentsPage() {
                   <option key={g} value={g}>
                     {g}
                   </option>
+                ))}
+              </select>
+            </div>
+            <div className="sm:col-span-2">
+              <Label>المجموعة (اختياري — لو فاضي، الطالب يتبع الصف الدراسي العادي)</Label>
+              <select
+                value={form.groupId || ''}
+                onChange={(e) => setForm({ ...form, groupId: e.target.value || null })}
+                className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
+              >
+                <option value="">بدون مجموعة (يتبع الصف)</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
                 ))}
               </select>
             </div>

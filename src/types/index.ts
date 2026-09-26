@@ -8,6 +8,7 @@ export interface User {
   phone: string
   role: Role
   grade?: string
+  groupId?: string | null
   avatarUrl?: string
   createdAt: string
 }
@@ -20,6 +21,7 @@ export interface Lesson {
   pdfUrl?: string
   videoUrl?: string
   imageUrl?: string
+  groupId?: string | null
   grade?: string | null // null/undefined = ظاهرة لكل الصفوف
   attachments: { id?: string; name: string; url: string }[]
   createdAt: string
