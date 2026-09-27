@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/dialog'
 import { useToast } from '@/context/ToastContext'
 import { useData } from '@/context/DataContext'
+import { fetchGroups, type Group } from '@/services/groupsService'
 import { GRADES } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import {
@@ -44,6 +45,8 @@ export default function AttendancePage() {
  
   const [grade, setGrade] = useState<string>(GRADES[0])
   const [date, setDate] = useState(todayISO())
+  const [groupId, setGroupId] = useState<string | null>(null)
+const [groups, setGroups] = useState<Group[]>([])
   const [rows, setRows] = useState<AttendanceRow[]>([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -58,7 +61,7 @@ export default function AttendancePage() {
   async function loadAttendance() {
     setLoading(true)
     try {
-      const data = await fetchAttendanceForDate(grade, date)
+      const data = await fetchAttendanceForDate(grade, date, groupId)
       setRows(data)
     } catch (err) {
       toast({ title: err instanceof Error ? err.message : 'تعذّر تحميل بيانات الحضور', variant: 'error' })
@@ -67,10 +70,21 @@ export default function AttendancePage() {
     }
   }
 
-  useEffect(() => {
-    loadAttendance()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [grade, date])
+  // حمّل المجموعات المتاحة للصف المختار
+useEffect(() => {
+  fetchGroups()
+    .then((all) => setGroups(all.filter((g) => !g.grade || g.grade === grade)))
+    .catch(() => setGroups([]))
+  // لو الصف اتغير، ارجع المجموعة لـ "بدون مجموعة"
+  setGroupId(null)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [grade])
+
+// حمّل الحضور لما أي حاجة تتغير (الصف، التاريخ، أو المجموعة)
+useEffect(() => {
+  loadAttendance()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [grade, date, groupId])
 
   function setStatus(studentId: string, status: AttendanceStatus) {
     setRows((prev) => prev.map((r) => (r.studentId === studentId ? { ...r, status } : r)))
@@ -153,28 +167,40 @@ export default function AttendancePage() {
       </div>
 
       <Card>
-        <CardContent className="p-5 grid sm:grid-cols-2 gap-4">
-          <div>
-            <Label>الصف الدراسي</Label>
-            <select
-              value={grade}
-              onChange={(e) => setGrade(e.target.value)}
-              className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
-            >
-              {GRADES.map((g) => (
-                <option key={g} value={g}>
-                  {g}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label>التاريخ</Label>
-            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-          </div>
-        </CardContent>
-      </Card>
-
+  <CardContent className="p-5 grid sm:grid-cols-3 gap-4">
+    <div>
+      <Label>الصف الدراسي</Label>
+      <select
+        value={grade}
+        onChange={(e) => setGrade(e.target.value)}
+        className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
+      >
+        {GRADES.map((g) => (
+          <option key={g} value={g}>
+            {g}
+          </option>
+        ))}
+      </select>
+    </div>
+    <div>
+      <Label>المجموعة</Label>
+      <select
+        value={groupId || ''}
+        onChange={(e) => setGroupId(e.target.value || null)}
+        className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
+      >
+        <option value="">بدون مجموعة (الطلاب غير المعينين لمجموعة)</option>
+        {groups.map((g) => (
+          <option key={g.id} value={g.id}>{g.name}</option>
+        ))}
+      </select>
+    </div>
+    <div>
+      <Label>التاريخ</Label>
+      <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+    </div>
+  </CardContent>
+</Card>
       {!loading && rows.length > 0 && (
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-sm text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] flex items-center gap-1.5">

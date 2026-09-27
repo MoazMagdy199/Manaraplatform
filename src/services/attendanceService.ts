@@ -7,8 +7,16 @@ import type {
   MyAttendanceSummary,
 } from '@/types'
 /** حضور كل طلاب صف معيّن في تاريخ معيّن (YYYY-MM-DD) */
-export async function fetchAttendanceForDate(grade: string, date: string): Promise<AttendanceRow[]> {
-  const { data, error } = await supabase.rpc('get_attendance_for_date', { p_grade: grade, p_date: date })
+export async function fetchAttendanceForDate(
+  grade: string,
+  date: string,
+  groupId?: string | null,
+): Promise<AttendanceRow[]> {
+  const { data, error } = await supabase.rpc('get_attendance_for_date', {
+    p_grade: grade,
+    p_date: date,
+    p_group_id: groupId || null,
+  })
   if (error) throw new Error(extractSupabaseError(error))
   return (data || []).map((r: any) => ({
     studentId: r.student_id,
