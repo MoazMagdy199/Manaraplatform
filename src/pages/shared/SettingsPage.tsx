@@ -2,6 +2,7 @@ import { Sun, Moon, Monitor } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { useTheme } from '@/context/ThemeContext'
 import { cn } from '@/lib/utils'
+import { NotificationSettings } from '@/components/shared/NotificationSettings'
 
 export default function SettingsPage() {
   const { theme, setTheme } = useTheme()
@@ -55,6 +56,8 @@ export default function SettingsPage() {
           </div>
         </CardContent>
       </Card>
+
+      <NotificationSettings />
     </div>
   )
 }

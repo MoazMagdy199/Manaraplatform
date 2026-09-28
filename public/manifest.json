@@ -1,0 +1,18 @@
+{
+  "name": "منارة",
+  "short_name": "منارة",
+  "description": "منصة تعليمية عربية",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F3F5F1",
+  "theme_color": "#0E6B5C",
+  "dir": "rtl",
+  "lang": "ar",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

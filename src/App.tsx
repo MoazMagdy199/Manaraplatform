@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/context/ThemeContext'
 import { DataProvider } from '@/context/DataContext'
 import { ToastProvider } from '@/context/ToastContext'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
+import { NotificationBanner } from '@/components/shared/NotificationBanner'
 
 import LandingPage from '@/pages/public/LandingPage'
 import LoginPage from '@/pages/auth/LoginPage'
@@ -94,6 +95,9 @@ function App() {
 
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+
+              {/* البانر بيظهر على كل الصفحات (بس بيتخفي في /login و /) */}
+              <NotificationBanner />
             </BrowserRouter>
           </DataProvider>
         </AuthProvider>
