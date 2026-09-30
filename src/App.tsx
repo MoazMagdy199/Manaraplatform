@@ -13,6 +13,7 @@ import { TeacherLayout } from '@/components/layout/TeacherLayout'
 import TeacherDashboard from '@/pages/teacher/TeacherDashboard'
 import StudentsPage from '@/pages/teacher/StudentsPage'
 import StudentProfilePage from '@/pages/teacher/StudentProfilePage'
+import LastLoginsPage from '@/pages/teacher/LastLoginsPage'
 import TeacherLessonsPage from '@/pages/teacher/LessonsPage'
 import TeacherHomeworkPage from '@/pages/teacher/HomeworkPage'
 import TeacherQuizzesPage from '@/pages/teacher/QuizzesPage'
@@ -70,6 +71,7 @@ function App() {
                   <Route path="profile" element={<ProfilePage />} />
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="groups" element={<GroupsPage />} />
+                  <Route path="last-logins" element={<LastLoginsPage />} />
                 </Route>
 
                 <Route

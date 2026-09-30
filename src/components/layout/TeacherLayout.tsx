@@ -11,6 +11,7 @@ import {
   Settings,
   User,
   Layers,
+  LogIn,
   CalendarCheck,
   Wallet,
 } from 'lucide-react'
@@ -29,6 +30,7 @@ const items: NavItem[] = [
   { to: '/teacher/grades', label: 'الدرجات', icon: Award },
   { to: '/teacher/announcements', label: 'الإعلانات', icon: Megaphone },
   { to: '/teacher/groups', label: 'المجموعات', icon: Layers },
+  { to: '/teacher/last-logins', label: 'آخر تسجيلات الدخول', icon: LogIn },
   { to: '/teacher/profile', label: 'الملف الشخصي', icon: User },
   { to: '/teacher/settings', label: 'الإعدادات', icon: Settings },
 ]
@@ -46,6 +48,7 @@ const titles: Record<string, string> = {
   '/teacher/announcements': 'الإعلانات',
   '/teacher/profile': 'الملف الشخصي',
   '/teacher/groups': 'المجموعات',
+  '/teacher/last-logins': 'آخر تسجيلات الدخول',
   '/teacher/settings': 'الإعدادات',
 }
 
