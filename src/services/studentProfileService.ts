@@ -32,3 +32,12 @@ export async function fetchStudentProfileSummary(studentId: string): Promise<Stu
     lastQuiz: data.last_quiz ? { title: data.last_quiz.title, submittedAt: data.last_quiz.submitted_at } : null,
   }
 }
+
+/** هل الطالب غاب آخر حصتين متتاليتين؟ */
+export async function checkConsecutiveAbsences(studentId: string): Promise<boolean> {
+  const { data, error } = await supabase.rpc('check_consecutive_absences', {
+    p_student_id: studentId,
+  })
+  if (error) throw new Error(extractSupabaseError(error))
+  return Boolean(data)
+}

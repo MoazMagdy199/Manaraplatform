@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowRight, CalendarCheck, ClipboardCheck, Sparkles, Award, Clock, History } from 'lucide-react'
+import { ArrowRight, CalendarCheck, ClipboardCheck, Sparkles, Award, Clock, History, MessageCircle, AlertTriangle } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useData } from '@/context/DataContext'
 import { useToast } from '@/context/ToastContext'
 import { initials, formatDateTime } from '@/lib/utils'
-import { fetchStudentProfileSummary, type StudentProfileSummary } from '@/services/studentProfileService'
+import {
+  fetchStudentProfileSummary,
+  checkConsecutiveAbsences,
+  type StudentProfileSummary,
+} from '@/services/studentProfileService'
 
 function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime()
@@ -31,16 +36,46 @@ export default function StudentProfilePage() {
 
   const [summary, setSummary] = useState<StudentProfileSummary | null>(null)
   const [loading, setLoading] = useState(true)
+  const [hasConsecutiveAbsences, setHasConsecutiveAbsences] = useState(false)
 
   useEffect(() => {
     if (!id) return
     setLoading(true)
-    fetchStudentProfileSummary(id)
-      .then(setSummary)
+    Promise.all([
+      fetchStudentProfileSummary(id),
+      checkConsecutiveAbsences(id),
+    ])
+      .then(([summaryData, absences]) => {
+        setSummary(summaryData)
+        setHasConsecutiveAbsences(absences)
+      })
       .catch((err) => toast({ title: err instanceof Error ? err.message : 'تعذّر تحميل بيانات الطالب', variant: 'error' }))
       .finally(() => setLoading(false))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
+
+  function sendAbsenceWhatsApp() {
+    if (!student?.parentPhone) {
+      toast({ title: 'رقم ولي الأمر غير مسجل', variant: 'error' })
+      return
+    }
+
+    const cleanPhone = student.parentPhone.replace(/\D/g, '')
+    let fullPhone = cleanPhone
+    if (!fullPhone.startsWith('20')) {
+      fullPhone = fullPhone.startsWith('0') ? `20${fullPhone.slice(1)}` : `20${fullPhone}`
+    }
+
+    const message =
+      `السلام عليكم، معاك سكرتيرة مستر معاذ مجدي.\n\n` +
+      `حبيت أبلغك إن ${student.name} غاب حصتين متتاليتين.\n\n` +
+      `ياريت تتابع معاه عشان ميفوّتش حصص مهمة.\n\n` +
+      `شكرًا لدعمكم ومتابعتكم. 🌹\n\n` +
+      `مع تحياتي،\nأ/ معاذ مجدي\nمدرس البرمجة`
+
+    const url = `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`
+    window.open(url, '_blank')
+  }
 
   if (!student) {
     return (
@@ -158,6 +193,32 @@ export default function StudentProfilePage() {
               </div>
             </CardContent>
           </Card>
+
+          {hasConsecutiveAbsences && student.parentPhone && (
+            <Card className="border-rose-200 dark:border-rose-900/50">
+              <CardContent className="p-6">
+                <div className="flex items-start gap-3">
+                  <div className="h-10 w-10 rounded-xl bg-rose-100 dark:bg-rose-900/30 flex items-center justify-center shrink-0">
+                    <AlertTriangle className="h-5 w-5 text-rose-600" />
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-display font-bold text-lg text-rose-700 dark:text-rose-400 mb-1">
+                      تنبيه: غياب متتالي
+                    </h3>
+                    <p className="text-sm text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mb-4">
+                      الطالب غاب حصتين متتاليتين. يُنصح بالتواصل مع ولي الأمر.
+                    </p>
+                    <Button
+                      onClick={sendAbsenceWhatsApp}
+                      className="bg-emerald-500 hover:bg-emerald-600 text-white"
+                    >
+                      <MessageCircle className="h-4 w-4" /> إرسال تنبيه غياب لولي الأمر
+                    </Button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </>
       ) : null}
     </div>

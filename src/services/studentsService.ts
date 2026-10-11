@@ -11,6 +11,8 @@ function mapRow(row: any): User {
     role: row.role,
     grade: row.grade ?? undefined,
     groupId: row.group_id ?? null,
+    parentPhone: row.parent_phone ?? null,
+    parentName: row.parent_name ?? null,
     avatarUrl: row.avatar_url ?? undefined,
     createdAt: row.created_at,
   }
@@ -35,6 +37,8 @@ export interface CreateStudentInput {
   phone: string
   grade: string
   groupId?: string | null
+  parentPhone?: string | null
+  parentName?: string | null
 }
 
 export async function createStudent(input: CreateStudentInput): Promise<User> {
@@ -51,6 +55,8 @@ export interface UpdateStudentInput {
   phone: string
   grade: string
   groupId?: string | null
+  parentPhone?: string | null
+  parentName?: string | null
   newPassword?: string
 }
 

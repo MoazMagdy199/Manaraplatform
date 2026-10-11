@@ -30,6 +30,8 @@ const emptyForm = {
   email: '',
   grade: grades[0],
   groupId: null as string | null,
+  parentName: '',
+  parentPhone: '',
 }
 
 export default function StudentsPage() {
@@ -74,6 +76,8 @@ export default function StudentsPage() {
       email: s.email,
       grade: s.grade || grades[0],
       groupId: s.groupId || null,
+      parentName: s.parentName || '',
+      parentPhone: s.parentPhone || '',
     })
     setDialogOpen(true)
   }
@@ -92,6 +96,8 @@ export default function StudentsPage() {
           phone: form.phone,
           grade: form.grade,
           groupId: form.groupId,
+          parentName: form.parentName || null,
+          parentPhone: form.parentPhone || null,
           newPassword: form.password || undefined,
         })
         toast({ title: 'تم تحديث بيانات الطالب بنجاح', variant: 'success' })
@@ -107,6 +113,8 @@ export default function StudentsPage() {
           phone: form.phone,
           grade: form.grade,
           groupId: form.groupId,
+          parentName: form.parentName || null,
+          parentPhone: form.parentPhone || null,
           password: form.password,
         })
         toast({ title: 'تمت إضافة الطالب بنجاح', variant: 'success' })
@@ -292,6 +300,28 @@ export default function StudentsPage() {
                   <option key={g.id} value={g.id}>{g.name}</option>
                 ))}
               </select>
+            </div>
+
+            <div className="sm:col-span-2 pt-2 border-t border-black/5 dark:border-[var(--color-dark-border)]">
+              <p className="text-xs font-semibold text-[var(--color-brand-600)] mb-3">📱 بيانات ولي الأمر (اختياري)</p>
+            </div>
+
+            <div>
+              <Label>اسم ولي الأمر</Label>
+              <Input
+                value={form.parentName}
+                onChange={(e) => setForm({ ...form, parentName: e.target.value })}
+                placeholder="مثال: محمد أحمد"
+              />
+            </div>
+            <div>
+              <Label>رقم واتساب ولي الأمر</Label>
+              <Input
+                dir="ltr"
+                value={form.parentPhone}
+                onChange={(e) => setForm({ ...form, parentPhone: e.target.value })}
+                placeholder="01xxxxxxxxx"
+              />
             </div>
           </div>
           <DialogFooter>

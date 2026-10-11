@@ -85,3 +85,46 @@ export async function fetchMyExamResults(): Promise<MyExamResult[]> {
     score: r.score !== null ? Number(r.score) : null,
   }))
 }
+
+// ========================================
+// ترتيب الطلاب حسب امتحان معين
+// ========================================
+
+export interface ExamRankingRow {
+  studentId: string
+  name: string
+  username: string
+  parentName: string | null
+  parentPhone: string | null
+  score: number | null
+  maxScore: number
+  percentage: number | null
+}
+
+interface RawExamRankingRow {
+  student_id: string
+  name: string
+  username: string
+  parent_name: string | null
+  parent_phone: string | null
+  score: number | null
+  max_score: number
+  percentage: number | null
+}
+
+/** ترتيب الطلاب في امتحان معيّن (للمدرس) */
+export async function fetchExamRanking(examId: string): Promise<ExamRankingRow[]> {
+  const { data, error } = await supabase.rpc('get_exam_ranking', { p_exam_id: examId })
+  if (error) throw new Error(extractSupabaseError(error))
+
+  return (data as RawExamRankingRow[] || []).map((r) => ({
+    studentId: r.student_id,
+    name: r.name,
+    username: r.username,
+    parentName: r.parent_name,
+    parentPhone: r.parent_phone,
+    score: r.score !== null ? Number(r.score) : null,
+    maxScore: Number(r.max_score),
+    percentage: r.percentage !== null ? Number(r.percentage) : null,
+  }))
+}
