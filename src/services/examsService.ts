@@ -8,6 +8,7 @@ export interface Exam {
   createdAt: string
   scoredCount: number
   totalStudents: number
+  groupId: string | null
 }
 
 export interface ExamScoreRow {
@@ -26,8 +27,14 @@ export interface MyExamResult {
 }
 
 /** قائمة امتحانات صف معيّن (للمدرس) مع عدد الطلاب المصحَّحين */
-export async function fetchExamsForGrade(grade: string): Promise<Exam[]> {
-  const { data, error } = await supabase.rpc('get_exams_for_grade', { p_grade: grade })
+export async function fetchExamsForGrade(
+  grade: string,
+  groupId?: string | null,
+): Promise<Exam[]> {
+  const { data, error } = await supabase.rpc('get_exams_for_grade', {
+    p_grade: grade,
+    p_group_id: groupId || null,
+  })
   if (error) throw new Error(extractSupabaseError(error))
   return (data || []).map((e: any) => ({
     id: e.id,
@@ -37,15 +44,48 @@ export async function fetchExamsForGrade(grade: string): Promise<Exam[]> {
     createdAt: e.created_at,
     scoredCount: Number(e.scored_count),
     totalStudents: Number(e.total_students),
+    groupId: e.group_id ?? null,
   }))
 }
 
 /** ينشئ امتحان جديد لصف معيّن */
-export async function createExam(grade: string, title: string, maxScore: number, examDate: string): Promise<void> {
-  const { error } = await supabase.from('exams').insert({ grade, title, max_score: maxScore, exam_date: examDate })
+export async function createExam(
+  grade: string,
+  title: string,
+  maxScore: number,
+  examDate: string,
+  groupId?: string | null,
+): Promise<void> {
+  const { error } = await supabase.from('exams').insert({
+    grade,
+    title,
+    max_score: maxScore,
+    exam_date: examDate,
+    group_id: groupId || null,
+  })
   if (error) throw new Error(extractSupabaseError(error))
 }
-
+/** يحدّث امتحان موجود */
+export async function updateExam(
+  examId: string,
+  data: {
+    title: string
+    maxScore: number
+    examDate: string
+    groupId?: string | null
+  },
+): Promise<void> {
+  const { error } = await supabase
+    .from('exams')
+    .update({
+      title: data.title,
+      max_score: data.maxScore,
+      exam_date: data.examDate,
+      group_id: data.groupId || null,
+    })
+    .eq('id', examId)
+  if (error) throw new Error(extractSupabaseError(error))
+}
 export async function deleteExam(examId: string): Promise<void> {
   const { error } = await supabase.from('exams').delete().eq('id', examId)
   if (error) throw new Error(extractSupabaseError(error))
@@ -113,8 +153,14 @@ interface RawExamRankingRow {
 }
 
 /** ترتيب الطلاب في امتحان معيّن (للمدرس) */
-export async function fetchExamRanking(examId: string): Promise<ExamRankingRow[]> {
-  const { data, error } = await supabase.rpc('get_exam_ranking', { p_exam_id: examId })
+export async function fetchExamRanking(
+  examId: string,
+  groupId?: string | null,
+): Promise<ExamRankingRow[]> {
+  const { data, error } = await supabase.rpc('get_exam_ranking', {
+    p_exam_id: examId,
+    p_group_id: groupId || null,
+  })
   if (error) throw new Error(extractSupabaseError(error))
 
   return (data as RawExamRankingRow[] || []).map((r) => ({

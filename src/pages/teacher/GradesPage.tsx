@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Plus, Trash2, Award, Users, ClipboardList, Trophy, MessageCircle, Percent } from 'lucide-react'
+import { Plus, Trash2, Award, Users, ClipboardList, Trophy, MessageCircle, Percent, Layers, Pencil } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,9 +17,11 @@ import {
 import { useToast } from '@/context/ToastContext'
 import { GRADES } from '@/lib/constants'
 import { formatDate, initials, cn } from '@/lib/utils'
+import { fetchGroups, type Group } from '@/services/groupsService'
 import {
   fetchExamsForGrade,
   createExam,
+  updateExam,
   deleteExam,
   fetchExamScores,
   setExamScore,
@@ -40,15 +42,19 @@ export default function GradesPage() {
 
   const [tab, setTab] = useState<TabType>('exams')
   const [grade, setGrade] = useState<string>(GRADES[0])
+  const [filterGroupId, setFilterGroupId] = useState<string | null>(null)
+  const [groups, setGroups] = useState<Group[]>([])
 
   // Tab 1: الامتحانات
   const [exams, setExams] = useState<Exam[]>([])
   const [loading, setLoading] = useState(true)
 
   const [createOpen, setCreateOpen] = useState(false)
+  const [editingExam, setEditingExam] = useState<Exam | null>(null)
   const [title, setTitle] = useState('')
   const [maxScore, setMaxScore] = useState('')
   const [examDate, setExamDate] = useState(todayISO())
+  const [newExamGroupId, setNewExamGroupId] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
   const [deleteTarget, setDeleteTarget] = useState<Exam | null>(null)
@@ -64,15 +70,29 @@ export default function GradesPage() {
   const [loadingRanking, setLoadingRanking] = useState(false)
 
   // ==========================================
+  // تحميل المجموعات
+  // ==========================================
+
+  useEffect(() => {
+    fetchGroups()
+      .then((all) => setGroups(all.filter((g) => !g.grade || g.grade === grade)))
+      .catch(() => setGroups([]))
+    setFilterGroupId(null)
+    setNewExamGroupId(null)
+  }, [grade])
+
+  // ==========================================
   // تحميل الامتحانات
   // ==========================================
 
   async function loadExams() {
     setLoading(true)
     try {
-      const data = await fetchExamsForGrade(grade)
+      const data = await fetchExamsForGrade(grade, filterGroupId)
       setExams(data)
-      if (data.length > 0 && !rankingExam) {
+      if (data.length === 0) {
+        setRankingExam('')
+      } else if (!data.find((e) => e.id === rankingExam)) {
         setRankingExam(data[0].id)
       }
     } catch (err) {
@@ -93,7 +113,8 @@ export default function GradesPage() {
     }
     setLoadingRanking(true)
     try {
-      const data = await fetchExamRanking(rankingExam)
+      // ✅ بنبعت filterGroupId عشان الترتيب يفلتر بالمجموعة
+      const data = await fetchExamRanking(rankingExam, filterGroupId)
       setRanking(data)
     } catch (err) {
       toast({ title: err instanceof Error ? err.message : 'تعذّر تحميل الترتيب', variant: 'error' })
@@ -105,33 +126,54 @@ export default function GradesPage() {
   useEffect(() => {
     if (tab === 'exams') loadExams()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [grade, tab])
+  }, [grade, filterGroupId, tab])
 
   useEffect(() => {
     if (tab === 'ranking') loadRanking()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rankingExam, tab])
+  }, [rankingExam, filterGroupId, tab])
 
   function openCreate() {
+    setEditingExam(null)
     setTitle('')
     setMaxScore('')
     setExamDate(todayISO())
+    setNewExamGroupId(filterGroupId)
     setCreateOpen(true)
   }
 
-  async function handleCreate() {
+  function openEdit(exam: Exam) {
+    setEditingExam(exam)
+    setTitle(exam.title)
+    setMaxScore(String(exam.maxScore))
+    setExamDate(exam.examDate)
+    setNewExamGroupId(exam.groupId)
+    setCreateOpen(true)
+  }
+
+  async function handleSave() {
     if (!title.trim() || !maxScore || Number(maxScore) <= 0) {
       toast({ title: 'يرجى تعبئة اسم الامتحان والدرجة النهائية', variant: 'error' })
       return
     }
     setSaving(true)
     try {
-      await createExam(grade, title.trim(), Number(maxScore), examDate)
-      toast({ title: 'تم إنشاء الامتحان بنجاح', variant: 'success' })
+      if (editingExam) {
+        await updateExam(editingExam.id, {
+          title: title.trim(),
+          maxScore: Number(maxScore),
+          examDate,
+          groupId: newExamGroupId,
+        })
+        toast({ title: 'تم تحديث الامتحان بنجاح', variant: 'success' })
+      } else {
+        await createExam(grade, title.trim(), Number(maxScore), examDate, newExamGroupId)
+        toast({ title: 'تم إنشاء الامتحان بنجاح', variant: 'success' })
+      }
       setCreateOpen(false)
       loadExams()
     } catch (err) {
-      toast({ title: err instanceof Error ? err.message : 'تعذّر إنشاء الامتحان', variant: 'error' })
+      toast({ title: err instanceof Error ? err.message : 'تعذّر حفظ الامتحان', variant: 'error' })
     } finally {
       setSaving(false)
     }
@@ -197,11 +239,9 @@ export default function GradesPage() {
     let body = ''
 
     if (student.score === null) {
-      // غائب
       body = `حبينا نبلغك إن ${student.name} كان غائب عن الامتحان.\n\n` +
         `ياريت تتابع معاه عشان ميفوّتش الامتحانات الجاية.`
     } else if (rank === 1) {
-      // الأول
       body = `🎉 ألف مبروك!\n\n` +
         `الطالب ${student.name} حصل على المركز الأول بدرجة ${student.score} من ${student.maxScore} (${student.percentage}%).\n\n` +
         `شكرًا لدعمكم ومتابعتكم في البيت. 🌹`
@@ -245,24 +285,20 @@ export default function GradesPage() {
   // حساب المراكز
   // ==========================================
 
-  // حساب المراكز بنظام "الترتيب المشترك" — كل اللي عندهم نفس الدرجة ياخدوا نفس المركز
-const rankedRows = (() => {
-  let currentRank = 0
-  let lastScore: number | null = null
-  let positionCount = 0
+  const rankedRows = (() => {
+    let currentRank = 0
+    let lastScore: number | null = null
+    let positionCount = 0
 
-  return ranking.map((student) => {
-    positionCount++
-
-    // لو الدرجة مختلفة عن السابقة، المركز بيتحدّث
-    if (student.score !== lastScore) {
-      currentRank = positionCount
-      lastScore = student.score
-    }
-
-    return { student, rank: student.score !== null ? currentRank : null }
-  })
-})()
+    return ranking.map((student) => {
+      positionCount++
+      if (student.score !== lastScore) {
+        currentRank = positionCount
+        lastScore = student.score
+      }
+      return { student, rank: student.score !== null ? currentRank : null }
+    })
+  })()
 
   return (
     <div className="space-y-6">
@@ -282,6 +318,18 @@ const rankedRows = (() => {
             {GRADES.map((g) => (
               <option key={g} value={g}>
                 {g}
+              </option>
+            ))}
+          </select>
+          <select
+            value={filterGroupId || ''}
+            onChange={(e) => setFilterGroupId(e.target.value || null)}
+            className="h-11 rounded-xl border border-black/10 bg-white px-4 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
+          >
+            <option value="">بدون مجموعة</option>
+            {groups.map((g) => (
+              <option key={g.id} value={g.id}>
+                {g.name}
               </option>
             ))}
           </select>
@@ -330,7 +378,7 @@ const rankedRows = (() => {
             <Card>
               <CardContent className="p-14 text-center text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
                 <Award className="h-10 w-10 mx-auto opacity-40 mb-3" />
-                لا توجد امتحانات لهذا الصف بعد
+                لا توجد امتحانات لهذا الصف والمجموعة
               </CardContent>
             </Card>
           ) : (
@@ -353,6 +401,9 @@ const rankedRows = (() => {
                     <div className="flex items-center gap-2 mt-4 pt-4 border-t border-black/5 dark:border-[var(--color-dark-border)]">
                       <Button size="sm" className="flex-1" onClick={() => openScores(e)}>
                         <ClipboardList className="h-3.5 w-3.5" /> تسجيل الدرجات
+                      </Button>
+                      <Button size="sm" variant="ghost" onClick={() => openEdit(e)} title="تعديل">
+                        <Pencil className="h-3.5 w-3.5" />
                       </Button>
                       <Button size="sm" variant="ghost" className="hover:text-[var(--color-rose-500)]" onClick={() => setDeleteTarget(e)}>
                         <Trash2 className="h-3.5 w-3.5" />
@@ -403,7 +454,7 @@ const rankedRows = (() => {
                 <Card>
                   <CardContent className="p-14 text-center text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
                     <Trophy className="h-10 w-10 mx-auto opacity-40 mb-3" />
-                    لا يوجد طلاب في هذا الصف
+                    لا يوجد طلاب في هذه المجموعة
                   </CardContent>
                 </Card>
               ) : (
@@ -523,12 +574,16 @@ const rankedRows = (() => {
         </>
       )}
 
-      {/* Create exam dialog */}
+      {/* Create/Edit exam dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>امتحان جديد — {grade}</DialogTitle>
-            <DialogDescription>أضف اسم الامتحان والدرجة النهائية والتاريخ</DialogDescription>
+            <DialogTitle>
+              {editingExam ? `تعديل: ${editingExam.title}` : `امتحان جديد — ${grade}`}
+            </DialogTitle>
+            <DialogDescription>
+              {editingExam ? 'عدّل بيانات الامتحان' : 'أضف اسم الامتحان والدرجة النهائية والتاريخ'}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -545,13 +600,30 @@ const rankedRows = (() => {
                 <Input type="date" value={examDate} onChange={(e) => setExamDate(e.target.value)} />
               </div>
             </div>
+            <div>
+              <Label className="flex items-center gap-1.5">
+                <Layers className="h-3.5 w-3.5" /> المجموعة
+              </Label>
+              <select
+                value={newExamGroupId || ''}
+                onChange={(e) => setNewExamGroupId(e.target.value || null)}
+                className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
+              >
+                <option value="">بدون مجموعة (امتحان عام للصف)</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {g.name}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setCreateOpen(false)}>
               إلغاء
             </Button>
-            <Button onClick={handleCreate} disabled={saving}>
-              {saving ? 'جاري الإنشاء...' : 'إنشاء الامتحان'}
+            <Button onClick={handleSave} disabled={saving}>
+              {saving ? 'جاري الحفظ...' : editingExam ? 'حفظ التعديلات' : 'إنشاء الامتحان'}
             </Button>
           </DialogFooter>
         </DialogContent>
