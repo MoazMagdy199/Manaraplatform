@@ -52,31 +52,70 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    let mounted = true
+  let mounted = true
 
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (data.session?.user) {
-        const profile = await fetchProfile(data.session.user.id)
-        if (mounted) setUser(profile)
-      }
-      if (mounted) setLoading(false)
-    })
-
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        const profile = await fetchProfile(session.user.id)
-        if (mounted) setUser(profile)
-      } else {
-        if (mounted) setUser(null)
-      }
-    })
-
-    return () => {
-      mounted = false
-      sub.subscription.unsubscribe()
+  // دالة تحدّث last_seen_at
+  async function updateLastSeen(userId: string) {
+    try {
+      await supabase
+        .from('profiles')
+        .update({ last_seen_at: new Date().toISOString() })
+        .eq('id', userId)
+    } catch {
+      // نتجاهل الأخطاء بصمت
     }
-  }, [])
+  }
 
+  supabase.auth.getSession().then(async ({ data }) => {
+    if (data.session?.user) {
+      const userId = data.session.user.id
+      const profile = await fetchProfile(userId)
+      if (mounted) setUser(profile)
+      // نحدّث آخر نشاط في الخلفية
+      updateLastSeen(userId)
+    }
+    if (mounted) setLoading(false)
+  })
+
+  const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
+    if (session?.user) {
+      const userId = session.user.id
+      const profile = await fetchProfile(userId)
+      if (mounted) setUser(profile)
+      // نحدّث آخر نشاط في الخلفية
+      updateLastSeen(userId)
+    } else {
+      if (mounted) setUser(null)
+    }
+  })
+
+  return () => {
+    mounted = false
+    sub.subscription.unsubscribe()
+  }
+}, [])
+// نحدّث last_seen_at لما التطبيق يفتح (حتى لو الجلسة موجودة)
+// نحدّث last_seen_at لما التطبيق يفتح (حتى لو الجلسة موجودة)
+useEffect(() => {
+  if (!user) return
+
+  const userId = user.id
+
+  async function updateLastSeen() {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ last_seen_at: new Date().toISOString() })
+      .eq('id', userId)
+
+    if (error) {
+      console.error('❌ Failed to update last_seen_at:', error)
+    } else {
+      console.log('✅ last_seen_at updated for:', userId)
+    }
+  }
+
+  updateLastSeen()
+}, [user?.id])
   const login: AuthContextValue['login'] = async (username, password, remember) => {
     try {
       // Usernames like "أحمد1" aren't valid emails — resolve to the real

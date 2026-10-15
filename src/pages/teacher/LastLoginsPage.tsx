@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Clock, Search, Users, UserCheck, UserX, AlertCircle } from 'lucide-react'
+import { Clock, Search, Users, UserCheck, UserX, AlertCircle, Activity } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,7 +12,7 @@ import { fetchAllStudentsLastLogin, type LastLoginRow } from '@/services/lastLog
 import { GRADES } from '@/lib/constants'
 
 function timeAgo(iso: string | null): string {
-  if (!iso) return 'لم يسجّل دخول بعد'
+  if (!iso) return '—'
   const diffMs = Date.now() - new Date(iso).getTime()
   const mins = Math.floor(diffMs / 60000)
   if (mins < 1) return 'الآن'
@@ -74,9 +74,9 @@ export default function LastLoginsPage() {
   // إحصائيات
   const stats = useMemo(() => {
     const total = rows.length
-    const today = rows.filter((r) => r.lastSignInAt && Date.now() - new Date(r.lastSignInAt).getTime() < 24 * 60 * 60 * 1000).length
-    const week = rows.filter((r) => r.lastSignInAt && Date.now() - new Date(r.lastSignInAt).getTime() < 7 * 24 * 60 * 60 * 1000).length
-    const never = rows.filter((r) => !r.lastSignInAt).length
+    const today = rows.filter((r) => r.lastSeenAt && Date.now() - new Date(r.lastSeenAt).getTime() < 24 * 60 * 60 * 1000).length
+    const week = rows.filter((r) => r.lastSeenAt && Date.now() - new Date(r.lastSeenAt).getTime() < 7 * 24 * 60 * 60 * 1000).length
+    const never = rows.filter((r) => !r.lastSeenAt).length
     return { total, today, week, never }
   }, [rows])
 
@@ -211,13 +211,14 @@ export default function LastLoginsPage() {
                     <th className="text-right font-semibold p-4">الطالب</th>
                     <th className="text-right font-semibold p-4 hidden md:table-cell">الصف</th>
                     <th className="text-right font-semibold p-4 hidden lg:table-cell">المجموعة</th>
-                    <th className="text-right font-semibold p-4">آخر دخول</th>
-                    <th className="text-right font-semibold p-4 hidden sm:table-cell">الحالة</th>
+                    <th className="text-right font-semibold p-4">آخر نشاط</th>
+                    <th className="text-right font-semibold p-4 hidden sm:table-cell">آخر دخول</th>
+                    <th className="text-right font-semibold p-4 hidden xl:table-cell">الحالة</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filtered.map((r) => {
-                    const status = activityStatus(r.lastSignInAt)
+                    const status = activityStatus(r.lastSeenAt)
                     return (
                       <tr
                         key={r.id}
@@ -248,12 +249,37 @@ export default function LastLoginsPage() {
                           {r.groupName || '—'}
                         </td>
                         <td className="p-4">
-                          <p className="font-semibold">{timeAgo(r.lastSignInAt)}</p>
-                          <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
-                            {r.lastSignInAt ? formatDateTime(r.lastSignInAt) : '—'}
-                          </p>
+                          {r.lastSeenAt ? (
+                            <>
+                              <p className="font-semibold flex items-center gap-1.5">
+                                <Activity className="h-3.5 w-3.5 text-emerald-500" />
+                                {timeAgo(r.lastSeenAt)}
+                              </p>
+                              <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
+                                {formatDateTime(r.lastSeenAt)}
+                              </p>
+                            </>
+                          ) : (
+                            <span className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
+                              لم يفتح المنصة بعد
+                            </span>
+                          )}
                         </td>
                         <td className="p-4 hidden sm:table-cell">
+                          {r.lastSignInAt ? (
+                            <>
+                              <p className="text-sm">{timeAgo(r.lastSignInAt)}</p>
+                              <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
+                                {formatDateTime(r.lastSignInAt)}
+                              </p>
+                            </>
+                          ) : (
+                            <span className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
+                              —
+                            </span>
+                          )}
+                        </td>
+                        <td className="p-4 hidden xl:table-cell">
                           <span className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${status.color}`}>
                             {status.label}
                           </span>

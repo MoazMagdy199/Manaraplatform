@@ -8,6 +8,7 @@ export interface LastLoginRow {
   groupId: string | null
   groupName: string | null
   lastSignInAt: string | null
+  lastSeenAt: string | null
 }
 
 interface RawRow {
@@ -18,6 +19,7 @@ interface RawRow {
   group_id: string | null
   group_name: string | null
   last_sign_in_at: string | null
+  last_seen_at: string | null
 }
 
 export async function fetchAllStudentsLastLogin(): Promise<LastLoginRow[]> {
@@ -32,5 +34,6 @@ export async function fetchAllStudentsLastLogin(): Promise<LastLoginRow[]> {
     groupId: r.group_id,
     groupName: r.group_name,
     lastSignInAt: r.last_sign_in_at,
+    lastSeenAt: r.last_seen_at,
   }))
 }
