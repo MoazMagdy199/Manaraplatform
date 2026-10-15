@@ -13,9 +13,15 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { useToast } from '@/context/ToastContext'
+import { useAuth } from '@/context/AuthContext'
 import { GRADES } from '@/lib/constants'
 import { cn, formatDate } from '@/lib/utils'
-import { fetchPaymentsForMonth, setPaymentStatus, fetchPaymentsOverview } from '@/services/paymentsService'
+import {
+  fetchPaymentsForMonth,
+  setPaymentStatus,
+  fetchPaymentsOverview,
+  requestPaymentChange,
+} from '@/services/paymentsService'
 import type { PaymentRow, PaymentsOverviewRow } from '@/types'
 
 const MONTH_NAMES = [
@@ -35,6 +41,7 @@ function monthLabel(value: string) {
 
 export default function PaymentsPage() {
   const { toast } = useToast()
+  const { user } = useAuth()
 
   const [grade, setGrade] = useState<string>(GRADES[0])
   const [month, setMonth] = useState(currentMonthValue())
@@ -47,6 +54,8 @@ export default function PaymentsPage() {
   const [amountVal, setAmountVal] = useState('')
   const [notesVal, setNotesVal] = useState('')
   const [savingNote, setSavingNote] = useState(false)
+
+  const isAssistant = user?.role === 'Assistant'
 
   async function loadPayments() {
     setLoading(true)
@@ -65,7 +74,7 @@ export default function PaymentsPage() {
       const data = await fetchPaymentsOverview(month)
       setOverview(data)
     } catch {
-      // صامت — الملخص العلوي غير حرج لعمل الصفحة
+      // صامت
     }
   }
 
@@ -81,12 +90,35 @@ export default function PaymentsPage() {
 
   async function togglePaid(row: PaymentRow) {
     const next = !row.paid
+
+    // Assistant: نطلب موافقة
+    if (isAssistant) {
+      try {
+        await requestPaymentChange({
+          studentId: row.studentId,
+          studentName: row.name,
+          month,
+          paid: next,
+          amount: row.amount,
+          notes: row.notes,
+        })
+        toast({
+          title: 'تم إرسال الطلب للمدرس للموافقة',
+          description: 'مش هيتم التنفيذ إلا بعد الموافقة',
+          variant: 'info',
+        })
+      } catch (err) {
+        toast({ title: err instanceof Error ? err.message : 'تعذّر إرسال الطلب', variant: 'error' })
+      }
+      return
+    }
+
+    // Teacher: ينفذ مباشرة
     setRows((prev) => prev.map((r) => (r.studentId === row.studentId ? { ...r, paid: next } : r)))
     try {
       await setPaymentStatus(row.studentId, month, next, row.amount, row.notes)
       loadOverview()
     } catch (err) {
-      // ارجع للحالة القديمة لو فشل الحفظ
       setRows((prev) => prev.map((r) => (r.studentId === row.studentId ? { ...r, paid: !next } : r)))
       toast({ title: err instanceof Error ? err.message : 'تعذّر تحديث الحالة', variant: 'error' })
     }
@@ -103,10 +135,32 @@ export default function PaymentsPage() {
     setSavingNote(true)
     try {
       const amount = amountVal.trim() ? Number(amountVal) : null
-      await setPaymentStatus(noteTarget.studentId, month, noteTarget.paid, amount, notesVal.trim() || null)
+      const notes = notesVal.trim() || null
+
+      // Assistant: نطلب موافقة
+      if (isAssistant) {
+        await requestPaymentChange({
+          studentId: noteTarget.studentId,
+          studentName: noteTarget.name,
+          month,
+          paid: noteTarget.paid,
+          amount,
+          notes,
+        })
+        toast({
+          title: 'تم إرسال الطلب للمدرس للموافقة',
+          description: 'مش هيتم التنفيذ إلا بعد الموافقة',
+          variant: 'info',
+        })
+        setNoteTarget(null)
+        return
+      }
+
+      // Teacher: ينفذ مباشرة
+      await setPaymentStatus(noteTarget.studentId, month, noteTarget.paid, amount, notes)
       setRows((prev) =>
         prev.map((r) =>
-          r.studentId === noteTarget.studentId ? { ...r, amount, notes: notesVal.trim() || null } : r,
+          r.studentId === noteTarget.studentId ? { ...r, amount, notes } : r,
         ),
       )
       toast({ title: 'تم الحفظ', variant: 'success' })
@@ -125,7 +179,9 @@ export default function PaymentsPage() {
       <div>
         <h2 className="font-display text-2xl font-extrabold">متابعة الاشتراك الشهري</h2>
         <p className="text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1 text-sm">
-          تابع مين دفع ومين لسه لكل شهر
+          {isAssistant
+            ? 'العمليات المالية بتحتاج موافقة المدرس'
+            : 'تابع مين دفع ومين لسه لكل شهر'}
         </p>
       </div>
 
@@ -243,7 +299,10 @@ export default function PaymentsPage() {
         <DialogContent className="max-w-sm">
           <DialogHeader>
             <DialogTitle>{noteTarget?.name}</DialogTitle>
-            <DialogDescription>تفاصيل الاشتراك — شهر {monthLabel(month)}</DialogDescription>
+            <DialogDescription>
+              تفاصيل الاشتراك — شهر {monthLabel(month)}
+              {isAssistant && ' (هيتم إرسال الطلب للمدرس)'}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div>
@@ -270,7 +329,7 @@ export default function PaymentsPage() {
               إلغاء
             </Button>
             <Button onClick={saveNote} disabled={savingNote}>
-              {savingNote ? 'جاري الحفظ...' : 'حفظ'}
+              {savingNote ? 'جاري الحفظ...' : isAssistant ? 'إرسال الطلب' : 'حفظ'}
             </Button>
           </DialogFooter>
         </DialogContent>
