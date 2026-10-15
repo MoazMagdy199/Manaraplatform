@@ -3,7 +3,19 @@ import type { ReactNode } from 'react'
 import { useAuth } from '@/context/AuthContext'
 import type { Role } from '@/types'
 
-export function ProtectedRoute({ children, role }: { children: ReactNode; role?: Role }) {
+function getRolePath(role: Role): string {
+  if (role === 'Teacher') return '/teacher'
+  if (role === 'Assistant') return '/assistant'
+  return '/student'
+}
+
+export function ProtectedRoute({ 
+  children, 
+  role 
+}: { 
+  children: ReactNode
+  role?: Role | Role[] 
+}) {
   const { user, loading } = useAuth()
 
   if (loading) {
@@ -15,8 +27,13 @@ export function ProtectedRoute({ children, role }: { children: ReactNode; role?:
   }
 
   if (!user) return <Navigate to="/login" replace />
-  if (role && user.role !== role) {
-    return <Navigate to={user.role === 'Teacher' ? '/teacher' : '/student'} replace />
+
+  if (role) {
+    const allowedRoles = Array.isArray(role) ? role : [role]
+    if (!allowedRoles.includes(user.role)) {
+      return <Navigate to={getRolePath(user.role)} replace />
+    }
   }
+
   return <>{children}</>
 }

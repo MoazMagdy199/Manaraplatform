@@ -14,6 +14,7 @@ import TeacherDashboard from '@/pages/teacher/TeacherDashboard'
 import StudentsPage from '@/pages/teacher/StudentsPage'
 import StudentProfilePage from '@/pages/teacher/StudentProfilePage'
 import LastLoginsPage from '@/pages/teacher/LastLoginsPage'
+import AssistantPage from '@/pages/teacher/AssistantPage'
 import TeacherLessonsPage from '@/pages/teacher/LessonsPage'
 import TeacherHomeworkPage from '@/pages/teacher/HomeworkPage'
 import TeacherQuizzesPage from '@/pages/teacher/QuizzesPage'
@@ -22,6 +23,10 @@ import TeacherPaymentsPage from '@/pages/teacher/PaymentsPage'
 import TeacherGradesPage from '@/pages/teacher/GradesPage'
 import TeacherAnnouncementsPage from '@/pages/teacher/AnnouncementsPage'
 import GroupsPage from '@/pages/teacher/GroupsPage'
+
+import { AssistantLayout } from '@/components/layout/AssistantLayout'
+import AssistantDashboard from '@/pages/assistant/AssistantDashboard'
+import ContactsPage from '@/pages/assistant/ContactsPage'
 
 import { StudentLayout } from '@/components/layout/StudentLayout'
 import StudentDashboard from '@/pages/student/StudentDashboard'
@@ -72,6 +77,32 @@ function App() {
                   <Route path="settings" element={<SettingsPage />} />
                   <Route path="groups" element={<GroupsPage />} />
                   <Route path="last-logins" element={<LastLoginsPage />} />
+                  <Route path="assistant" element={<AssistantPage />} />
+                </Route>
+
+                <Route
+                  path="/assistant"
+                  element={
+                    <ProtectedRoute role="Assistant">
+                      <AssistantLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  <Route index element={<AssistantDashboard />} />
+                  <Route path="students" element={<StudentsPage />} />
+                  <Route path="contacts" element={<ContactsPage />} />
+                  <Route path="attendance" element={<AttendancePage />} />
+                  <Route path="lessons" element={<TeacherLessonsPage />} />
+                  <Route path="homework" element={<TeacherHomeworkPage />} />
+                  <Route path="quizzes" element={<TeacherQuizzesPage />} />
+                  <Route path="weekly-report" element={<TeacherWeeklyReportPage />} />
+                  <Route path="students/:id" element={<StudentProfilePage />} />
+                  <Route path="payments" element={<TeacherPaymentsPage />} />
+                  <Route path="grades" element={<TeacherGradesPage />} />
+                  <Route path="announcements" element={<TeacherAnnouncementsPage />} />
+                  <Route path="profile" element={<ProfilePage />} />
+                  <Route path="settings" element={<SettingsPage />} />
+                  <Route path="groups" element={<GroupsPage />} />
                 </Route>
 
                 <Route
@@ -107,5 +138,4 @@ function App() {
     </ThemeProvider>
   )
 }
-
-export default App
+export default App 

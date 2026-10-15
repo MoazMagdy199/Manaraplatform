@@ -7,6 +7,12 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/context/ToastContext'
 
+function getRolePath(role: string | undefined): string {
+  if (role === 'Teacher') return '/teacher'
+  if (role === 'Assistant') return '/assistant'
+  return '/student'
+}
+
 export default function LoginPage() {
   const { user, login } = useAuth()
   const navigate = useNavigate()
@@ -20,7 +26,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
 
   if (user) {
-    return <Navigate to={user.role === 'Teacher' ? '/teacher' : '/student'} replace />
+    return <Navigate to={getRolePath(user.role)} replace />
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -34,7 +40,7 @@ export default function LoginPage() {
       return
     }
     toast({ title: 'تم تسجيل الدخول بنجاح', variant: 'success' })
-    navigate(res.user?.role === 'Teacher' ? '/teacher' : '/student')
+    navigate(getRolePath(res.user?.role))
   }
 
   function fillDemo(role: 'teacher' | 'student') {
@@ -73,7 +79,7 @@ export default function LoginPage() {
         </div>
 
         <div className="relative flex items-center gap-6 text-sm text-white/60">
-          <span>© {new Date().getFullYear()} منارة التعليمية</span>
+          <span>©️ {new Date().getFullYear()} منارة التعليمية</span>
         </div>
       </div>
 

@@ -14,6 +14,7 @@ import {
   LogIn,
   CalendarCheck,
   Wallet,
+  UserCog,
 } from 'lucide-react'
 import { DashboardLayout } from './DashboardLayout'
 import type { NavItem } from './Sidebar'
@@ -31,6 +32,7 @@ const items: NavItem[] = [
   { to: '/teacher/announcements', label: 'الإعلانات', icon: Megaphone },
   { to: '/teacher/groups', label: 'المجموعات', icon: Layers },
   { to: '/teacher/last-logins', label: 'آخر تسجيلات الدخول', icon: LogIn },
+  { to: '/teacher/assistant', label: 'الاسيستنت', icon: UserCog },
   { to: '/teacher/profile', label: 'الملف الشخصي', icon: User },
   { to: '/teacher/settings', label: 'الإعدادات', icon: Settings },
 ]
@@ -49,6 +51,7 @@ const titles: Record<string, string> = {
   '/teacher/profile': 'الملف الشخصي',
   '/teacher/groups': 'المجموعات',
   '/teacher/last-logins': 'آخر تسجيلات الدخول',
+  '/teacher/assistant': 'الاسيستنت',
   '/teacher/settings': 'الإعدادات',
 }
 

@@ -20,8 +20,10 @@ export function Topbar({ onMenuClick, title }: { onMenuClick: () => void; title:
 
   if (!user) return null
 
-  const base = user.role === 'Teacher' ? '/teacher' : '/student'
-
+const base = 
+  user.role === 'Teacher' ? '/teacher' : 
+  user.role === 'Assistant' ? '/assistant' : 
+  '/student'
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-black/5 bg-[var(--color-paper-raised)]/85 backdrop-blur px-4 sm:px-6 dark:bg-[var(--color-dark-surface)]/85 dark:border-[var(--color-dark-border)]">
       <div className="flex items-center gap-3">
