@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Wallet, Check, X, Users, TrendingUp } from 'lucide-react'
+import { Wallet, Check, X, Users, TrendingUp, Layers } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,6 +16,7 @@ import { useToast } from '@/context/ToastContext'
 import { useAuth } from '@/context/AuthContext'
 import { GRADES } from '@/lib/constants'
 import { cn, formatDate } from '@/lib/utils'
+import { fetchGroups, type Group } from '@/services/groupsService'
 import {
   fetchPaymentsForMonth,
   setPaymentStatus,
@@ -44,7 +45,10 @@ export default function PaymentsPage() {
   const { user } = useAuth()
 
   const [grade, setGrade] = useState<string>(GRADES[0])
+  const [groupId, setGroupId] = useState<string | null>(null)
+  const [groups, setGroups] = useState<Group[]>([])
   const [month, setMonth] = useState(currentMonthValue())
+  
   const [rows, setRows] = useState<PaymentRow[]>([])
   const [loading, setLoading] = useState(false)
 
@@ -57,10 +61,18 @@ export default function PaymentsPage() {
 
   const isAssistant = user?.role === 'Assistant'
 
+  // تحميل المجموعات
+  useEffect(() => {
+    fetchGroups()
+      .then((all) => setGroups(all.filter((g) => !g.grade || g.grade === grade)))
+      .catch(() => setGroups([]))
+    setGroupId(null) // تصفير المجموعة عند تغيير الصف
+  }, [grade])
+
   async function loadPayments() {
     setLoading(true)
     try {
-      const data = await fetchPaymentsForMonth(grade, month)
+      const data = await fetchPaymentsForMonth(grade, month, groupId)
       setRows(data)
     } catch (err) {
       toast({ title: err instanceof Error ? err.message : 'تعذّر تحميل بيانات الاشتراك', variant: 'error' })
@@ -81,7 +93,7 @@ export default function PaymentsPage() {
   useEffect(() => {
     loadPayments()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [grade, month])
+  }, [grade, month, groupId])
 
   useEffect(() => {
     loadOverview()
@@ -91,7 +103,6 @@ export default function PaymentsPage() {
   async function togglePaid(row: PaymentRow) {
     const next = !row.paid
 
-    // Assistant: نطلب موافقة
     if (isAssistant) {
       try {
         await requestPaymentChange({
@@ -113,7 +124,6 @@ export default function PaymentsPage() {
       return
     }
 
-    // Teacher: ينفذ مباشرة
     setRows((prev) => prev.map((r) => (r.studentId === row.studentId ? { ...r, paid: next } : r)))
     try {
       await setPaymentStatus(row.studentId, month, next, row.amount, row.notes)
@@ -137,7 +147,6 @@ export default function PaymentsPage() {
       const amount = amountVal.trim() ? Number(amountVal) : null
       const notes = notesVal.trim() || null
 
-      // Assistant: نطلب موافقة
       if (isAssistant) {
         await requestPaymentChange({
           studentId: noteTarget.studentId,
@@ -156,7 +165,6 @@ export default function PaymentsPage() {
         return
       }
 
-      // Teacher: ينفذ مباشرة
       await setPaymentStatus(noteTarget.studentId, month, noteTarget.paid, amount, notes)
       setRows((prev) =>
         prev.map((r) =>
@@ -210,7 +218,7 @@ export default function PaymentsPage() {
       )}
 
       <Card>
-        <CardContent className="p-5 grid sm:grid-cols-2 gap-4">
+        <CardContent className="p-5 grid sm:grid-cols-3 gap-4">
           <div>
             <Label>الصف الدراسي</Label>
             <select
@@ -221,6 +229,23 @@ export default function PaymentsPage() {
               {GRADES.map((g) => (
                 <option key={g} value={g}>
                   {g}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label className="flex items-center gap-1.5">
+              <Layers className="h-3.5 w-3.5" /> المجموعة
+            </Label>
+            <select
+              value={groupId || ''}
+              onChange={(e) => setGroupId(e.target.value || null)}
+              className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
+            >
+              <option value="">بدون مجموعة (الطلاب غير المعينين لمجموعة)</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>
+                  {g.name}
                 </option>
               ))}
             </select>
@@ -248,7 +273,7 @@ export default function PaymentsPage() {
           ) : rows.length === 0 ? (
             <div className="text-center py-14 text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
               <Wallet className="h-10 w-10 mx-auto opacity-40 mb-3" />
-              لا يوجد طلاب في هذا الصف
+              لا يوجد طلاب في هذه المجموعة
             </div>
           ) : (
             <div className="divide-y divide-black/5 dark:divide-[var(--color-dark-border)]">

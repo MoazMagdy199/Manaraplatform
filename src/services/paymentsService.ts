@@ -1,9 +1,17 @@
 import { supabase, extractSupabaseError } from '@/lib/supabase'
 import type { PaymentRow, PaymentsOverviewRow } from '@/types'
 
-/** حالة اشتراك كل طلاب صف معيّن في شهر معيّن (بصيغة 'YYYY-MM') */
-export async function fetchPaymentsForMonth(grade: string, month: string): Promise<PaymentRow[]> {
-  const { data, error } = await supabase.rpc('get_payments_for_month', { p_grade: grade, p_month: month })
+/** حالة اشتراك كل طلاب صف/مجموعة معيّنة في شهر معيّن (بصيغة 'YYYY-MM') */
+export async function fetchPaymentsForMonth(
+  grade: string, 
+  month: string,
+  groupId?: string | null,
+): Promise<PaymentRow[]> {
+  const { data, error } = await supabase.rpc('get_payments_for_month', { 
+    p_grade: grade, 
+    p_month: month,
+    p_group_id: groupId || null,
+  })
   if (error) throw new Error(extractSupabaseError(error))
   return (data || []).map((r: any) => ({
     studentId: r.student_id,
