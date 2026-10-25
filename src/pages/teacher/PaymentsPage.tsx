@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Wallet, Check, X, Users, TrendingUp, Layers } from 'lucide-react'
+import { Wallet, Check, X, Users, TrendingUp, Layers, Banknote, AlertCircle } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -22,6 +22,8 @@ import {
   setPaymentStatus,
   fetchPaymentsOverview,
   requestPaymentChange,
+  fetchPaymentsSummary,
+  type PaymentsSummary,
 } from '@/services/paymentsService'
 import type { PaymentRow, PaymentsOverviewRow } from '@/types'
 
@@ -53,6 +55,8 @@ export default function PaymentsPage() {
   const [loading, setLoading] = useState(false)
 
   const [overview, setOverview] = useState<PaymentsOverviewRow[]>([])
+  const [summary, setSummary] = useState<PaymentsSummary | null>(null)
+  const [loadingSummary, setLoadingSummary] = useState(false)
 
   const [noteTarget, setNoteTarget] = useState<PaymentRow | null>(null)
   const [amountVal, setAmountVal] = useState('')
@@ -90,6 +94,19 @@ export default function PaymentsPage() {
     }
   }
 
+  async function loadSummary() {
+    if (isAssistant) return // الـ Assistant مش بيشوف الإحصائيات
+    setLoadingSummary(true)
+    try {
+      const data = await fetchPaymentsSummary(month, groupId)
+      setSummary(data)
+    } catch {
+      // صامت
+    } finally {
+      setLoadingSummary(false)
+    }
+  }
+
   useEffect(() => {
     loadPayments()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -97,8 +114,9 @@ export default function PaymentsPage() {
 
   useEffect(() => {
     loadOverview()
+    loadSummary()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month])
+  }, [month, groupId])
 
   async function togglePaid(row: PaymentRow) {
     const next = !row.paid
@@ -128,6 +146,7 @@ export default function PaymentsPage() {
     try {
       await setPaymentStatus(row.studentId, month, next, row.amount, row.notes)
       loadOverview()
+      loadSummary()
     } catch (err) {
       setRows((prev) => prev.map((r) => (r.studentId === row.studentId ? { ...r, paid: !next } : r)))
       toast({ title: err instanceof Error ? err.message : 'تعذّر تحديث الحالة', variant: 'error' })
@@ -173,6 +192,7 @@ export default function PaymentsPage() {
       )
       toast({ title: 'تم الحفظ', variant: 'success' })
       setNoteTarget(null)
+      loadSummary()
     } catch (err) {
       toast({ title: err instanceof Error ? err.message : 'تعذّر الحفظ', variant: 'error' })
     } finally {
@@ -193,6 +213,48 @@ export default function PaymentsPage() {
         </p>
       </div>
 
+      {/* كروت الإحصائيات (للمدرس فقط) */}
+      {!isAssistant && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <Card className="border-[var(--color-brand-200)] dark:border-[var(--color-brand-900)]">
+            <CardContent className="p-5">
+              <div className="h-9 w-9 rounded-xl bg-[var(--color-brand-50)] dark:bg-[var(--color-brand-900)]/40 flex items-center justify-center mb-3">
+                <Banknote className="h-4.5 w-4.5 text-[var(--color-brand-600)]" />
+              </div>
+              <p className="font-display text-2xl font-extrabold">
+                {loadingSummary ? '...' : (summary?.totalExpected || 0).toLocaleString()} <span className="text-sm font-normal">ج.م</span>
+              </p>
+              <p className="text-sm text-[var(--color-ink-soft)] mt-1">إجمالي الاشتراكات المتوقعة</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-emerald-200 dark:border-emerald-900/50">
+            <CardContent className="p-5">
+              <div className="h-9 w-9 rounded-xl bg-emerald-50 flex items-center justify-center mb-3">
+                <TrendingUp className="h-4.5 w-4.5 text-emerald-600" />
+              </div>
+              <p className="font-display text-2xl font-extrabold text-emerald-700 dark:text-emerald-400">
+                {loadingSummary ? '...' : (summary?.totalPaid || 0).toLocaleString()} <span className="text-sm font-normal">ج.م</span>
+              </p>
+              <p className="text-sm text-[var(--color-ink-soft)] mt-1">تم تحصيلها ({summary?.paidCount || 0} طالب)</p>
+            </CardContent>
+          </Card>
+
+          <Card className="border-rose-200 dark:border-rose-900/50">
+            <CardContent className="p-5">
+              <div className="h-9 w-9 rounded-xl bg-rose-50 flex items-center justify-center mb-3">
+                <AlertCircle className="h-4.5 w-4.5 text-rose-600" />
+              </div>
+              <p className="font-display text-2xl font-extrabold text-rose-700 dark:text-rose-400">
+                {loadingSummary ? '...' : (summary?.totalRemaining || 0).toLocaleString()} <span className="text-sm font-normal">ج.م</span>
+              </p>
+              <p className="text-sm text-[var(--color-ink-soft)] mt-1">لسه متحصلة ({summary?.unpaidCount || 0} طالب)</p>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* كروت ملخص الصفوف */}
       {overview.length > 0 && (
         <div className="grid sm:grid-cols-3 gap-4">
           {overview.map((o) => (
@@ -242,7 +304,7 @@ export default function PaymentsPage() {
               onChange={(e) => setGroupId(e.target.value || null)}
               className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
             >
-              <option value="">بدون مجموعة (الطلاب غير المعينين لمجموعة)</option>
+              <option value="">كل الطلاب (بدون فلتر)</option>
               {groups.map((g) => (
                 <option key={g.id} value={g.id}>
                   {g.name}

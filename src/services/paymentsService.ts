@@ -198,3 +198,36 @@ export async function rejectRequest(requestId: string, reviewNotes?: string): Pr
   })
   if (error) throw new Error(extractSupabaseError(error))
 }
+// ========================================
+// ملخص الإحصائيات المالية
+// ========================================
+
+export interface PaymentsSummary {
+  totalExpected: number
+  totalPaid: number
+  totalRemaining: number
+  studentsCount: number
+  paidCount: number
+  unpaidCount: number
+}
+
+export async function fetchPaymentsSummary(
+  month: string,
+  groupId?: string | null,
+): Promise<PaymentsSummary> {
+  const { data, error } = await supabase.rpc('get_payments_summary', {
+    p_month: month,
+    p_group_id: groupId || null,
+  })
+  if (error) throw new Error(extractSupabaseError(error))
+
+  const res = data as any || {}
+  return {
+    totalExpected: Number(res.total_expected) || 0,
+    totalPaid: Number(res.total_paid) || 0,
+    totalRemaining: Number(res.total_remaining) || 0,
+    studentsCount: Number(res.students_count) || 0,
+    paidCount: Number(res.paid_count) || 0,
+    unpaidCount: Number(res.unpaid_count) || 0,
+  }
+}
