@@ -39,8 +39,18 @@ export default function LoginPage() {
       setError(res.error || 'حدث خطأ ما')
       return
     }
-    toast({ title: 'تم تسجيل الدخول بنجاح', variant: 'success' })
-    navigate(getRolePath(res.user?.role))
+
+    // 🌟 إظهار رسالة الصلاة على النبي
+    toast({
+      title: 'اللهم صلِّ وسلم وبارك على نبينا محمد ﷺ',
+      description: 'أهلاً بك في منارة.. رحلة التفوق تبدأ الآن',
+      variant: 'success', 
+    })
+
+    // ⏳ الانتظار ثانيتين قبل الانتقال للصفحة التالية
+    setTimeout(() => {
+      navigate(getRolePath(res.user?.role))
+    }, 2000) 
   }
 
   function fillDemo(role: 'teacher' | 'student') {
