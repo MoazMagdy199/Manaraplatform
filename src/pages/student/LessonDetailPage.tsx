@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, Link, Navigate } from 'react-router-dom'
-import { ArrowRight, FileDown, CheckCircle2, Paperclip, Download, Lightbulb } from 'lucide-react'
+import { ArrowRight, FileDown, CheckCircle2, Paperclip, Download, Lightbulb, Sparkles } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import {
@@ -16,13 +16,17 @@ import { formatDate } from '@/lib/utils'
 
 export default function LessonDetailPage() {
   const { id } = useParams()
-  const { lessons, markLessonRead } = useData()
+  // 👈 ضفنا quizzes هنا عشان نجيب الاختبارات
+  const { lessons, markLessonRead, quizzes } = useData() 
   const { toast } = useToast()
 
-  const [summaryOpen, setSummaryOpen] = useState(false) // 👈 حالة فتح النافذة
+  const [summaryOpen, setSummaryOpen] = useState(false)
 
   const lesson = lessons.find((l) => l.id === id)
   if (!lesson) return <Navigate to="/student/lessons" replace />
+
+  // 👈 فلترة الاختبارات عشان نجيب اللي تبع الحصة دي
+  const lessonQuizzes = quizzes.filter((q) => q.lessonId === lesson.id)
 
   async function handleMarkRead() {
     try {
@@ -62,7 +66,6 @@ export default function LessonDetailPage() {
           </p>
         </div>
 
-        {/* 👈 زرار فتح الملخص */}
         {hasSummary && (
           <Button 
             onClick={() => setSummaryOpen(true)} 
@@ -96,6 +99,30 @@ export default function LessonDetailPage() {
           />
         </CardContent>
       </Card>
+
+      {/* 👈 كارت الاختبار الجديد */}
+      {lessonQuizzes.length > 0 && (
+        <Card className="border-[var(--color-brand-200)] bg-[var(--color-brand-50)] dark:bg-[var(--color-brand-900)]/20 dark:border-[var(--color-brand-900)]/50 shadow-sm mt-6">
+          <CardContent className="p-5 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-[var(--color-brand-100)] dark:bg-[var(--color-brand-800)] flex items-center justify-center shrink-0">
+                <Sparkles className="h-5 w-5 text-[var(--color-brand-600)] dark:text-[var(--color-brand-300)]" />
+              </div>
+              <div>
+                <p className="font-semibold text-sm">اختبار الحصة متاح الآن!</p>
+                <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-0.5">
+                  {lessonQuizzes.length} اختبار مرتبط بهذه الحصة. اختبر معلوماتك الآن.
+                </p>
+              </div>
+            </div>
+            <Button className="w-full sm:w-auto shrink-0" asChild>
+              <Link to={`/student/quizzes/${lessonQuizzes[0].id}`}>
+                ابدأ الاختبار <ArrowRight className="h-4 w-4 mr-1" />
+              </Link>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {lesson.pdfUrl && (
         <Card>
@@ -152,7 +179,6 @@ export default function LessonDetailPage() {
         )}
       </div>
 
-      {/* 👈 نافذة الملخص والصور */}
       <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
