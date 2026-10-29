@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Trash2, Sparkles, Users2 } from 'lucide-react'
+import { Plus, Trash2, Sparkles, Users2, ClipboardPaste } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -40,6 +40,10 @@ export default function TeacherQuizzesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Quiz | null>(null)
   const [viewResults, setViewResults] = useState<Quiz | null>(null)
 
+  // 👈 حالة زرار اللصق السريع
+  const [pasteDialogOpen, setPasteDialogOpen] = useState(false)
+  const [pasteText, setPasteText] = useState('')
+
   function openAdd() {
     setTitle('')
     setLessonId(lessons[0]?.id || '')
@@ -50,6 +54,47 @@ export default function TeacherQuizzesPage() {
 
   function updateQuestion(id: string, patch: Partial<QuizQuestion>) {
     setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, ...patch } : q)))
+  }
+
+  // 👈 دالة تحويل النص لأسئلة
+  function handleProcessPaste() {
+    if (!pasteText.trim()) return
+
+    try {
+      const blocks = pasteText.split('السؤال:').filter((b) => b.trim() !== '')
+      
+      const newQuestions: QuizQuestion[] = blocks.map((block) => {
+        const lines = block.split('\n').map((l) => l.trim()).filter((l) => l !== '')
+        
+        const questionText = lines[0] || ''
+        const a = lines.find((l) => l.startsWith('A)'))?.replace('A)', '').trim() || ''
+        const b = lines.find((l) => l.startsWith('B)'))?.replace('B)', '').trim() || ''
+        const c = lines.find((l) => l.startsWith('C)'))?.replace('C)', '').trim() || ''
+        const d = lines.find((l) => l.startsWith('D)'))?.replace('D)', '').trim() || ''
+        
+        const answerLine = lines.find((l) => l.startsWith('الإجابة:'))
+        const correctAnswer = (answerLine ? answerLine.replace('الإجابة:', '').trim().toUpperCase() : 'A') as 'A' | 'B' | 'C' | 'D'
+
+        return {
+          id: 'tmp-' + Math.random().toString(36).slice(2, 8),
+          question: questionText,
+          options: { A: a, B: b, C: c, D: d },
+          correctAnswer: correctAnswer,
+          points: 5,
+        }
+      })
+
+      if (newQuestions.length > 0) {
+        setQuestions((prev) => [...prev, ...newQuestions])
+        toast({ title: `تم إضافة ${newQuestions.length} سؤال بنجاح`, variant: 'success' })
+        setPasteDialogOpen(false)
+        setPasteText('')
+      } else {
+        toast({ title: 'لم يتم العثور على أسئلة بالتنسيق الصحيح', variant: 'error' })
+      }
+    } catch {
+      toast({ title: 'حدث خطأ أثناء قراءة النص', variant: 'error' })
+    }
   }
 
   async function handleSave() {
@@ -133,12 +178,27 @@ export default function TeacherQuizzesPage() {
 
       {/* Create quiz dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>إنشاء اختبار جديد</DialogTitle>
             <DialogDescription>أضف الأسئلة والاختيارات وحدد الإجابة الصحيحة لكل سؤال</DialogDescription>
           </DialogHeader>
+          
           <div className="space-y-5">
+            {/* 👈 زرار اللصق السريع */}
+            <div className="flex justify-end">
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                onClick={() => setPasteDialogOpen(true)}
+                className="text-[var(--color-brand-600)] border-[var(--color-brand-200)] bg-[var(--color-brand-50)] hover:bg-[var(--color-brand-100)]"
+              >
+                <ClipboardPaste className="h-4 w-4 ml-2" />
+                لصق الأسئلة بسرعة
+              </Button>
+            </div>
+
             <div className="grid sm:grid-cols-3 gap-4">
               <div className="sm:col-span-2">
                 <Label>عنوان الاختبار</Label>
@@ -214,6 +274,42 @@ export default function TeacherQuizzesPage() {
               إلغاء
             </Button>
             <Button onClick={handleSave}>نشر الاختبار</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* 👈 Dialog لصق الأسئلة */}
+      <Dialog open={pasteDialogOpen} onOpenChange={setPasteDialogOpen}>
+        <DialogContent className="max-w-xl">
+          <DialogHeader>
+            <DialogTitle>لصق الأسئلة بسرعة</DialogTitle>
+            <DialogDescription>
+              الصق الأسئلة هنا. تأكد من استخدام التنسيق التالي:
+              <br />
+              <span className="text-xs font-mono bg-black/5 p-1 rounded mt-2 inline-block" dir="ltr">
+                السؤال: ما هي عاصمة مصر؟<br />
+                A) الإسكندرية<br />
+                B) القاهرة<br />
+                C) أسوان<br />
+                D) طنطا<br />
+                الإجابة: B
+              </span>
+            </DialogDescription>
+          </DialogHeader>
+          <div>
+            <textarea
+              value={pasteText}
+              onChange={(e) => setPasteText(e.target.value)}
+              className="w-full h-64 p-3 rounded-xl border border-black/10 dark:border-[var(--color-dark-border)] bg-transparent text-sm font-mono"
+              placeholder="الصق الأسئلة هنا..."
+              dir="rtl"
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPasteDialogOpen(false)}>
+              إلغاء
+            </Button>
+            <Button onClick={handleProcessPaste}>تأكيد وإضافة الأسئلة</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
