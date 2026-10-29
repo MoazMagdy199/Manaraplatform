@@ -20,11 +20,12 @@ export interface Lesson {
   title: string
   description: string
   content: string
+  summary?: string | null // 👈 تم إضافة الملخص هنا
   pdfUrl?: string
   videoUrl?: string
   imageUrl?: string
   groupId?: string | null
-  grade?: string | null // null/undefined = ظاهرة لكل الصفوف
+  grade?: string | null 
   attachments: { id?: string; name: string; url: string }[]
   createdAt: string
   completedByStudent?: boolean
@@ -137,6 +138,7 @@ export interface AttendanceSummaryRow {
   attendancePercentage: number
   absencePercentage: number
 }
+
 export interface MyAttendanceSummary {
   studentId: string
   name: string
@@ -147,13 +149,14 @@ export interface MyAttendanceSummary {
   attendancePercentage: number
   absencePercentage: number
 }
-// 0 = الأحد ... 6 = السبت (نفس ترقيم JS Date.getDay())
+
 export interface ScheduleDay {
   id: string
   grade: string
   dayOfWeek: number
   label?: string | null
 }
+
 export interface PaymentRow {
   studentId: string
   name: string

@@ -1,5 +1,5 @@
 import { useParams, Link, Navigate } from 'react-router-dom'
-import { ArrowRight, FileDown, CheckCircle2, Paperclip, Download } from 'lucide-react'
+import { ArrowRight, FileDown, CheckCircle2, Paperclip, Download, Lightbulb } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { useData } from '@/context/DataContext'
@@ -63,6 +63,22 @@ export default function LessonDetailPage() {
           </div>
         </Card>
       )}
+
+      {/* 👈 بداية كارت الملخص السريع (Cheat Sheet) */}
+      {lesson.summary && (
+        <Card className="border-[var(--color-amber-200)] bg-[var(--color-amber-50)] dark:bg-[var(--color-amber-900)]/20 dark:border-[var(--color-amber-900)]/50 shadow-sm">
+          <CardContent className="p-5 sm:p-6">
+            <h3 className="font-display font-bold text-lg flex items-center gap-2 text-[var(--color-amber-700)] dark:text-[var(--color-amber-400)] mb-3">
+              <Lightbulb className="h-5 w-5" />
+              ملخص الحصة (الزتونة) 💡
+            </h3>
+            <p className="text-sm leading-relaxed whitespace-pre-wrap">
+              {lesson.summary}
+            </p>
+          </CardContent>
+        </Card>
+      )}
+      {/* 👈 نهاية كارت الملخص السريع */}
 
       <Card>
         <CardContent className="p-6 sm:p-8">

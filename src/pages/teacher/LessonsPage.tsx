@@ -20,7 +20,17 @@ import { formatDate } from '@/lib/utils'
 import { fetchGroups, type Group } from '@/services/groupsService'
 import type { Lesson } from '@/types'
 
-const emptyForm = { title: '', description: '', content: '', grade: '', groupId: null as string | null, pdfUrl: '', videoUrl: '', imageUrl: '' }
+const emptyForm = { 
+  title: '', 
+  description: '', 
+  content: '', 
+  summary: '', // 👈 تمت الإضافة
+  grade: '', 
+  groupId: null as string | null, 
+  pdfUrl: '', 
+  videoUrl: '', 
+  imageUrl: '' 
+}
 
 export default function TeacherLessonsPage() {
   const { lessons, addLesson, updateLesson, removeLesson } = useData()
@@ -50,6 +60,7 @@ export default function TeacherLessonsPage() {
       title: l.title,
       description: l.description,
       content: l.content,
+      summary: l.summary || '', // 👈 تمت الإضافة
       grade: l.grade || '',
       groupId: l.groupId || null,
       pdfUrl: l.pdfUrl || '',
@@ -158,6 +169,19 @@ export default function TeacherLessonsPage() {
               <Label>وصف مختصر</Label>
               <Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
+
+            {/* 👈 بداية حقل الملخص الجديد */}
+            <div>
+              <Label>ملخص سريع (Cheat Sheet) - اختياري</Label>
+              <Textarea 
+                rows={3} 
+                placeholder="أهم النقاط، القوانين، أو الزتونة اللي الطالب يراجعها قبل الامتحان..." 
+                value={form.summary} 
+                onChange={(e) => setForm({ ...form, summary: e.target.value })} 
+              />
+            </div>
+            {/* 👈 نهاية حقل الملخص الجديد */}
+
             <div>
               <Label>الصف الدراسي</Label>
               <select

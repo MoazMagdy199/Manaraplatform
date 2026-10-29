@@ -6,6 +6,7 @@ interface LessonRow {
   title: string
   description: string
   content: string
+  summary: string | null // 👈 تمت الإضافة
   grade: string | null
   group_id: string | null
   pdf_url: string | null
@@ -21,6 +22,7 @@ function mapLesson(r: LessonRow, completed?: boolean): Lesson {
     title: r.title,
     description: r.description,
     content: r.content,
+    summary: r.summary ?? undefined, // 👈 تمت الإضافة
     grade: r.grade ?? undefined,
     groupId: r.group_id,
     pdfUrl: r.pdf_url ?? undefined,
@@ -55,6 +57,7 @@ export interface UpsertLessonInput {
   title: string
   description: string
   content: string
+  summary?: string | null // 👈 تمت الإضافة
   grade?: string
   groupId?: string | null
   pdfUrl?: string
@@ -67,6 +70,7 @@ function toRow(input: UpsertLessonInput) {
     title: input.title,
     description: input.description,
     content: input.content,
+    summary: input.summary || null, // 👈 تمت الإضافة
     grade: input.grade || null,
     group_id: input.groupId || null,
     pdf_url: input.pdfUrl || null,
