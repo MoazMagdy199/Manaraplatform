@@ -15,7 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useData } from '@/context/DataContext'
-import { useAuth } from '@/context/AuthContext' // 👈 ضفنا ده عشان نعرف دور المستخدم
+import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { initials } from '@/lib/utils'
 import { fetchGroups, type Group } from '@/services/groupsService'
@@ -37,7 +37,7 @@ const emptyForm = {
 
 export default function StudentsPage() {
   const { students, addStudent, updateStudent, removeStudent, resetPassword } = useData()
-  const { user } = useAuth() // 👈 عشان نعرف المسار
+  const { user } = useAuth()
   const { toast } = useToast()
 
   const [query, setQuery] = useState('')
@@ -47,7 +47,6 @@ export default function StudentsPage() {
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
   const [groups, setGroups] = useState<Group[]>([])
 
-  // 👈 بنحدد المسار (للمدرس أو للمساعد)
   const basePath = user?.role === 'Assistant' ? '/assistant' : '/teacher'
 
   useEffect(() => {
@@ -224,9 +223,9 @@ export default function StudentsPage() {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-1">
-                        {/* 👈 زرار التقرير الجديد */}
+                        {/* 👈 زرار التقرير (بيفتح في تاب جديد) */}
                         <Button size="icon" variant="ghost" asChild title="تقرير شامل">
-                          <Link to={`${basePath}/students/${s.id}/report`}>
+                          <Link to={`${basePath}/students/${s.id}/report`} target="_blank" rel="noopener noreferrer">
                             <FileText className="h-4 w-4 text-emerald-600" />
                           </Link>
                         </Button>
