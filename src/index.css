@@ -117,3 +117,17 @@
     }
   }
 }
+@media print {
+  /* إخفاء السايد بار والهيدر في الطباعة */
+  aside, nav, header, [role="navigation"] {
+    display: none !important;
+  }
+  
+  /* التأكد من إن المحتوى الأساسي بياخد الشاشة كلها */
+  main, #root > div {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
