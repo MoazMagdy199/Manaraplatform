@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
-import { Printer, X, CheckCircle2, XCircle, FileText, CalendarDays, Award } from 'lucide-react'
+import { Printer, X, CheckCircle2, XCircle, FileText, CalendarDays, Award, MessageCircle } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { supabase, extractSupabaseError } from '@/lib/supabase'
 import { formatDate } from '@/lib/utils'
@@ -36,6 +36,7 @@ export default function StudentReportPage() {
   const { toast } = useToast()
   
   const [data, setData] = useState<ReportData | null>(null)
+  const [parentPhone, setParentPhone] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const month = currentMonthValue()
 
@@ -44,12 +45,20 @@ export default function StudentReportPage() {
       if (!id) return
       setLoading(true)
       try {
+        // جلب بيانات التقرير
         const { data: report, error } = await supabase.rpc('get_student_full_report', {
           p_student_id: id,
           p_month: month
         })
         if (error) throw error
         setData(report as ReportData)
+
+        // جلب رقم ولي الأمر
+        const { data: profile } = await supabase.from('profiles').select('parent_phone').eq('id', id).single()
+        if (profile?.parent_phone) {
+          setParentPhone(profile.parent_phone)
+        }
+
       } catch (err) {
         toast({ title: extractSupabaseError(err), variant: 'error' })
       } finally {
@@ -58,6 +67,35 @@ export default function StudentReportPage() {
     }
     loadReport()
   }, [id, month, toast])
+
+  function handlePrint() {
+    const originalTitle = document.title
+    document.title = `متابعة ${data?.student_name || 'الطالب'} - برمجة`
+    
+    window.print()
+    
+    setTimeout(() => {
+      document.title = originalTitle
+    }, 1000)
+  }
+
+  function sendWhatsApp() {
+    if (!parentPhone) {
+      toast({ title: 'رقم ولي الأمر غير مسجل لهذا الطالب', variant: 'error' })
+      return
+    }
+
+    const cleanPhone = parentPhone.replace(/\D/g, '')
+    let fullPhone = cleanPhone
+    if (!fullPhone.startsWith('20')) {
+      fullPhone = fullPhone.startsWith('0') ? `20${fullPhone.slice(1)}` : `20${fullPhone}`
+    }
+
+    const message = `السلام عليكم، معاك منصة منارة التعليمية.\n\nمرفق لكم تقرير متابعة الطالب/ة: ${data?.student_name}\n\nيرجى التكرم بالاطلاع على التفاصيل (الحضور، الدرجات، والاشتراك).\n\nمع تحياتي،\nأ/ معاذ مجدي`
+    
+    const url = `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`
+    window.open(url, '_blank')
+  }
 
   if (loading) {
     return (
@@ -74,13 +112,26 @@ export default function StudentReportPage() {
       <div className="max-w-3xl mx-auto space-y-6">
         
         {/* أزرار التحكم - تختفي عند الطباعة */}
-        <div className="flex items-center justify-between print:hidden">
+        <div className="flex flex-wrap items-center justify-between gap-3 print:hidden mb-6">
           <Button variant="outline" onClick={() => window.close()}>
             <X className="h-4 w-4 ml-2" /> إغلاق الصفحة
           </Button>
-          <Button onClick={() => window.print()} className="bg-[var(--color-brand-600)] hover:bg-[var(--color-brand-700)]">
-            <Printer className="h-4 w-4 ml-2" /> طباعة / حفظ PDF
-          </Button>
+          
+          <div className="flex gap-2">
+            <Button 
+              onClick={sendWhatsApp} 
+              className="bg-emerald-500 hover:bg-emerald-600 text-white"
+            >
+              <MessageCircle className="h-4 w-4 ml-2" />
+              إرسال لولي الأمر
+            </Button>
+            <Button 
+              onClick={handlePrint} 
+              className="bg-[var(--color-brand-600)] hover:bg-[var(--color-brand-700)]"
+            >
+              <Printer className="h-4 w-4 ml-2" /> طباعة / حفظ PDF
+            </Button>
+          </div>
         </div>
 
         {/* محتوى التقرير */}
