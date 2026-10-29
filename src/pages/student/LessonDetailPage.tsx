@@ -64,7 +64,7 @@ export default function LessonDetailPage() {
         </Card>
       )}
 
-      {/* 👈 بداية كارت الملخص السريع (Cheat Sheet) */}
+      {/* 👈 كارت الملخص السريع (Cheat Sheet) بعد التعديل ليعرض الصور */}
       {lesson.summary && (
         <Card className="border-[var(--color-amber-200)] bg-[var(--color-amber-50)] dark:bg-[var(--color-amber-900)]/20 dark:border-[var(--color-amber-900)]/50 shadow-sm">
           <CardContent className="p-5 sm:p-6">
@@ -72,13 +72,13 @@ export default function LessonDetailPage() {
               <Lightbulb className="h-5 w-5" />
               ملخص الحصة (الزتونة) 💡
             </h3>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">
-              {lesson.summary}
-            </p>
+            <div
+              className="prose-sm leading-loose [&_h3]:font-display [&_h3]:font-bold [&_h3]:text-lg [&_p]:mb-3 [&_img]:rounded-xl [&_img]:my-4 [&_img]:max-w-full [&_ul]:list-disc [&_ul]:pr-5"
+              dangerouslySetInnerHTML={{ __html: lesson.summary }}
+            />
           </CardContent>
         </Card>
       )}
-      {/* 👈 نهاية كارت الملخص السريع */}
 
       <Card>
         <CardContent className="p-6 sm:p-8">

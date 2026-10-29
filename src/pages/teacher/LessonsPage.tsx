@@ -24,7 +24,7 @@ const emptyForm = {
   title: '', 
   description: '', 
   content: '', 
-  summary: '', // 👈 تمت الإضافة
+  summary: '', 
   grade: '', 
   groupId: null as string | null, 
   pdfUrl: '', 
@@ -60,7 +60,7 @@ export default function TeacherLessonsPage() {
       title: l.title,
       description: l.description,
       content: l.content,
-      summary: l.summary || '', // 👈 تمت الإضافة
+      summary: l.summary || '', 
       grade: l.grade || '',
       groupId: l.groupId || null,
       pdfUrl: l.pdfUrl || '',
@@ -155,7 +155,7 @@ export default function TeacherLessonsPage() {
       )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? 'تعديل الحصة' : 'إضافة حصة جديدة'}</DialogTitle>
             <DialogDescription>أضف تفاصيل الحصة والمرفقات التعليمية</DialogDescription>
@@ -170,17 +170,15 @@ export default function TeacherLessonsPage() {
               <Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
 
-            {/* 👈 بداية حقل الملخص الجديد */}
+            {/* حقل الملخص المحسن (يقبل صور وتنسيق) */}
             <div>
               <Label>ملخص سريع (Cheat Sheet) - اختياري</Label>
-              <Textarea 
-                rows={3} 
-                placeholder="أهم النقاط، القوانين، أو الزتونة اللي الطالب يراجعها قبل الامتحان..." 
-                value={form.summary} 
-                onChange={(e) => setForm({ ...form, summary: e.target.value })} 
+              <RichTextEditor 
+                value={form.summary || ''} 
+                onChange={(html) => setForm({ ...form, summary: html })} 
+                placeholder="أهم النقاط، القوانين، أو الزتونة اللي الطالب يراجعها قبل الامتحان... (يمكنك إضافة صور)" 
               />
             </div>
-            {/* 👈 نهاية حقل الملخص الجديد */}
 
             <div>
               <Label>الصف الدراسي</Label>
