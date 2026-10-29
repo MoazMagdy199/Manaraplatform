@@ -1,7 +1,15 @@
+import { useState } from 'react'
 import { useParams, Link, Navigate } from 'react-router-dom'
 import { ArrowRight, FileDown, CheckCircle2, Paperclip, Download, Lightbulb } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
 import { useData } from '@/context/DataContext'
 import { useToast } from '@/context/ToastContext'
 import { formatDate } from '@/lib/utils'
@@ -10,6 +18,8 @@ export default function LessonDetailPage() {
   const { id } = useParams()
   const { lessons, markLessonRead } = useData()
   const { toast } = useToast()
+
+  const [summaryOpen, setSummaryOpen] = useState(false) // 👈 حالة فتح النافذة
 
   const lesson = lessons.find((l) => l.id === id)
   if (!lesson) return <Navigate to="/student/lessons" replace />
@@ -24,6 +34,7 @@ export default function LessonDetailPage() {
   }
 
   const youtubeEmbed = lesson.videoUrl
+  const hasSummary = lesson.summary || (lesson.summaryImages && lesson.summaryImages.length > 0)
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -40,14 +51,27 @@ export default function LessonDetailPage() {
         </div>
       )}
 
-      <div>
-        <h1 className="font-display text-2xl sm:text-3xl font-extrabold">{lesson.title}</h1>
-        <p className="text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-2">
-          {lesson.description}
-        </p>
-        <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-2">
-          نُشرت في {formatDate(lesson.createdAt)}
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+        <div>
+          <h1 className="font-display text-2xl sm:text-3xl font-extrabold">{lesson.title}</h1>
+          <p className="text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-2">
+            {lesson.description}
+          </p>
+          <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-2">
+            نُشرت في {formatDate(lesson.createdAt)}
+          </p>
+        </div>
+
+        {/* 👈 زرار فتح الملخص */}
+        {hasSummary && (
+          <Button 
+            onClick={() => setSummaryOpen(true)} 
+            className="shrink-0 bg-amber-500 hover:bg-amber-600 text-white shadow-md"
+          >
+            <Lightbulb className="h-4 w-4 ml-2" />
+            فتح الملخص السريع 💡
+          </Button>
+        )}
       </div>
 
       {youtubeEmbed && (
@@ -61,22 +85,6 @@ export default function LessonDetailPage() {
               allowFullScreen
             />
           </div>
-        </Card>
-      )}
-
-      {/* 👈 كارت الملخص السريع (Cheat Sheet) بعد التعديل ليعرض الصور */}
-      {lesson.summary && (
-        <Card className="border-[var(--color-amber-200)] bg-[var(--color-amber-50)] dark:bg-[var(--color-amber-900)]/20 dark:border-[var(--color-amber-900)]/50 shadow-sm">
-          <CardContent className="p-5 sm:p-6">
-            <h3 className="font-display font-bold text-lg flex items-center gap-2 text-[var(--color-amber-700)] dark:text-[var(--color-amber-400)] mb-3">
-              <Lightbulb className="h-5 w-5" />
-              ملخص الحصة (الزتونة) 💡
-            </h3>
-            <div
-              className="prose-sm leading-loose [&_h3]:font-display [&_h3]:font-bold [&_h3]:text-lg [&_p]:mb-3 [&_img]:rounded-xl [&_img]:my-4 [&_img]:max-w-full [&_ul]:list-disc [&_ul]:pr-5"
-              dangerouslySetInnerHTML={{ __html: lesson.summary }}
-            />
-          </CardContent>
         </Card>
       )}
 
@@ -143,6 +151,48 @@ export default function LessonDetailPage() {
           </Button>
         )}
       </div>
+
+      {/* 👈 نافذة الملخص والصور */}
+      <Dialog open={summaryOpen} onOpenChange={setSummaryOpen}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600 dark:text-amber-500">
+              <Lightbulb className="h-5 w-5" />
+              ملخص الحصة (الزتونة)
+            </DialogTitle>
+            <DialogDescription>
+              {lesson.title}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            {lesson.summary && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 p-4 rounded-xl border border-amber-200 dark:border-amber-900/50">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap font-medium">
+                  {lesson.summary}
+                </p>
+              </div>
+            )}
+
+            {lesson.summaryImages && lesson.summaryImages.length > 0 && (
+              <div>
+                <p className="text-sm font-semibold mb-2">صور إضافية:</p>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  {lesson.summaryImages.map((url, idx) => (
+                    <a key={idx} href={url} target="_blank" rel="noopener noreferrer">
+                      <img 
+                        src={url} 
+                        alt={`ملخص ${idx + 1}`} 
+                        className="w-full h-32 object-cover rounded-xl border border-black/10 dark:border-white/10 hover:scale-105 transition-transform cursor-pointer" 
+                      />
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

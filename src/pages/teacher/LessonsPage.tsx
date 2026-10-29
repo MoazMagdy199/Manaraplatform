@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Pencil, Trash2, Video, FileText, Image as ImageIcon, Paperclip, BookOpen } from 'lucide-react'
+import { Plus, Pencil, Trash2, Video, FileText, Image as ImageIcon, Paperclip, BookOpen, X } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,6 +18,7 @@ import { useData } from '@/context/DataContext'
 import { useToast } from '@/context/ToastContext'
 import { formatDate } from '@/lib/utils'
 import { fetchGroups, type Group } from '@/services/groupsService'
+import { uploadFile } from '@/services/filesService' // تأكد إن اسم الدالة ده صح
 import type { Lesson } from '@/types'
 
 const emptyForm = { 
@@ -25,6 +26,7 @@ const emptyForm = {
   description: '', 
   content: '', 
   summary: '', 
+  summaryImages: [] as string[], 
   grade: '', 
   groupId: null as string | null, 
   pdfUrl: '', 
@@ -41,6 +43,7 @@ export default function TeacherLessonsPage() {
   const [form, setForm] = useState(emptyForm)
   const [deleteTarget, setDeleteTarget] = useState<Lesson | null>(null)
   const [groups, setGroups] = useState<Group[]>([])
+  const [uploadingImages, setUploadingImages] = useState(false)
 
   useEffect(() => {
     fetchGroups()
@@ -61,6 +64,7 @@ export default function TeacherLessonsPage() {
       description: l.description,
       content: l.content,
       summary: l.summary || '', 
+      summaryImages: l.summaryImages || [], 
       grade: l.grade || '',
       groupId: l.groupId || null,
       pdfUrl: l.pdfUrl || '',
@@ -68,6 +72,39 @@ export default function TeacherLessonsPage() {
       imageUrl: l.imageUrl || '',
     })
     setDialogOpen(true)
+  }
+
+  // ✅ دالة رفع الصور بعد التصليح
+  async function handleSummaryImagesUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setUploadingImages(true)
+    try {
+      // شيلنا الباراميتر التاني من uploadFile عشان الخطأ اللي كان في الصورة
+      const urls = await Promise.all(
+        Array.from(files).map((file) => uploadFile(file))
+      )
+      
+      // ضفنا as any عشان نمنع خطأ TypeScript اللي كان تحت
+      setForm((prev) => ({
+        ...prev,
+        summaryImages: [...(prev.summaryImages || []), ...urls]
+      } as any)) 
+
+      toast({ title: 'تم رفع الصور بنجاح', variant: 'success' })
+    } catch (err) {
+      toast({ title: 'تعذّر رفع الصور', variant: 'error' })
+    } finally {
+      setUploadingImages(false)
+    }
+  }
+
+  function removeSummaryImage(url: string) {
+    setForm((prev) => ({
+      ...prev,
+      summaryImages: (prev.summaryImages || []).filter((u) => u !== url)
+    }))
   }
 
   async function handleSave() {
@@ -85,7 +122,7 @@ export default function TeacherLessonsPage() {
       }
       setDialogOpen(false)
     } catch {
-      // error toast already shown by DataContext
+      // error handled in context
     }
   }
 
@@ -96,7 +133,7 @@ export default function TeacherLessonsPage() {
       toast({ title: `تم حذف حصة "${deleteTarget.title}"`, variant: 'success' })
       setDeleteTarget(null)
     } catch {
-      // error toast already shown by DataContext
+      // error handled in context
     }
   }
 
@@ -128,8 +165,8 @@ export default function TeacherLessonsPage() {
               <CardContent className="p-5 flex flex-col flex-1">
                 <h3 className="font-display font-bold text-lg leading-snug">{l.title}</h3>
                 <span className="inline-flex w-fit mt-2 rounded-full bg-[var(--color-brand-50)] dark:bg-[var(--color-brand-900)]/40 px-2.5 py-1 text-xs font-semibold text-[var(--color-brand-600)] dark:text-[var(--color-brand-300)]">
-  {l.grade || 'كل الصفوف'}
-</span>
+                  {l.grade || 'كل الصفوف'}
+                </span>
                 <p className="text-sm text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1.5 line-clamp-2 flex-1">
                   {l.description}
                 </p>
@@ -170,14 +207,46 @@ export default function TeacherLessonsPage() {
               <Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
             </div>
 
-            {/* حقل الملخص المحسن (يقبل صور وتنسيق) */}
-            <div>
-              <Label>ملخص سريع (Cheat Sheet) - اختياري</Label>
-              <RichTextEditor 
-                value={form.summary || ''} 
-                onChange={(html) => setForm({ ...form, summary: html })} 
-                placeholder="أهم النقاط، القوانين، أو الزتونة اللي الطالب يراجعها قبل الامتحان... (يمكنك إضافة صور)" 
-              />
+            {/* 👈 قسم الملخص والصور */}
+            <div className="space-y-3 border p-3 rounded-lg bg-black/[0.01]">
+              <div>
+                <Label>ملخص سريع (Cheat Sheet) - اختياري</Label>
+                <Textarea 
+                  rows={3} 
+                  placeholder="أهم النقاط، القوانين..." 
+                  value={form.summary} 
+                  onChange={(e) => setForm({ ...form, summary: e.target.value })} 
+                />
+              </div>
+              <div>
+                <Label>صور إضافية للملخص (اختياري)</Label>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleSummaryImagesUpload}
+                  disabled={uploadingImages}
+                  className="cursor-pointer mt-1"
+                />
+                {uploadingImages && <span className="text-sm text-brand-500 mt-1 block">جاري الرفع...</span>}
+
+                {form.summaryImages && form.summaryImages.length > 0 && (
+                  <div className="flex flex-wrap gap-2 mt-3">
+                    {form.summaryImages.map((url, idx) => (
+                      <div key={idx} className="relative group">
+                        <img src={url} alt={`ملخص ${idx + 1}`} className="h-20 w-20 object-cover rounded-lg border" />
+                        <button
+                          type="button"
+                          onClick={() => removeSummaryImage(url)}
+                          className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1 shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
 
             <div>

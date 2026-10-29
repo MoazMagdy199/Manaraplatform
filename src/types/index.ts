@@ -20,7 +20,8 @@ export interface Lesson {
   title: string
   description: string
   content: string
-  summary?: string | null // 👈 تم إضافة الملخص هنا
+  summary?: string | null 
+  summaryImages?: string[] | null // 👈 تمت الإضافة
   pdfUrl?: string
   videoUrl?: string
   imageUrl?: string
