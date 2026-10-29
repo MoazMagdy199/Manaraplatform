@@ -13,6 +13,7 @@ import { TeacherLayout } from '@/components/layout/TeacherLayout'
 import TeacherDashboard from '@/pages/teacher/TeacherDashboard'
 import StudentsPage from '@/pages/teacher/StudentsPage'
 import StudentProfilePage from '@/pages/teacher/StudentProfilePage'
+import StudentReportPage from '@/pages/shared/StudentReportPage' // 👈 تمت الإضافة
 import LastLoginsPage from '@/pages/teacher/LastLoginsPage'
 import AssistantPage from '@/pages/teacher/AssistantPage'
 import TeacherLessonsPage from '@/pages/teacher/LessonsPage'
@@ -65,11 +66,12 @@ function App() {
                   <Route index element={<TeacherDashboard />} />
                   <Route path="attendance" element={<AttendancePage />} />
                   <Route path="students" element={<StudentsPage />} />
+                  <Route path="students/:id" element={<StudentProfilePage />} />
+                  <Route path="students/:id/report" element={<StudentReportPage />} /> {/* 👈 تمت الإضافة */}
                   <Route path="lessons" element={<TeacherLessonsPage />} />
                   <Route path="homework" element={<TeacherHomeworkPage />} />
                   <Route path="quizzes" element={<TeacherQuizzesPage />} />
                   <Route path="weekly-report" element={<TeacherWeeklyReportPage />} />
-                  <Route path="students/:id" element={<StudentProfilePage />} />
                   <Route path="payments" element={<TeacherPaymentsPage />} />
                   <Route path="grades" element={<TeacherGradesPage />} />
                   <Route path="announcements" element={<TeacherAnnouncementsPage />} />
@@ -90,13 +92,14 @@ function App() {
                 >
                   <Route index element={<AssistantDashboard />} />
                   <Route path="students" element={<StudentsPage />} />
+                  <Route path="students/:id" element={<StudentProfilePage />} />
+                  <Route path="students/:id/report" element={<StudentReportPage />} /> {/* 👈 تمت الإضافة */}
                   <Route path="contacts" element={<ContactsPage />} />
                   <Route path="attendance" element={<AttendancePage />} />
                   <Route path="lessons" element={<TeacherLessonsPage />} />
                   <Route path="homework" element={<TeacherHomeworkPage />} />
                   <Route path="quizzes" element={<TeacherQuizzesPage />} />
                   <Route path="weekly-report" element={<TeacherWeeklyReportPage />} />
-                  <Route path="students/:id" element={<StudentProfilePage />} />
                   <Route path="payments" element={<TeacherPaymentsPage />} />
                   <Route path="grades" element={<TeacherGradesPage />} />
                   <Route path="announcements" element={<TeacherAnnouncementsPage />} />
@@ -129,7 +132,6 @@ function App() {
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
 
-              {/* البانر بيظهر على كل الصفحات (بس بيتخفي في /login و /) */}
               <NotificationBanner />
             </BrowserRouter>
           </DataProvider>
@@ -138,4 +140,4 @@ function App() {
     </ThemeProvider>
   )
 }
-export default App 
+export default App

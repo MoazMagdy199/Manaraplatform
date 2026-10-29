@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
-import { Search, Plus, Pencil, Trash2, KeyRound, GraduationCap, Layers } from 'lucide-react'
+import { Search, Plus, Pencil, Trash2, KeyRound, GraduationCap, Layers, FileText } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/dialog'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import { useData } from '@/context/DataContext'
+import { useAuth } from '@/context/AuthContext' // 👈 ضفنا ده عشان نعرف دور المستخدم
 import { useToast } from '@/context/ToastContext'
 import { initials } from '@/lib/utils'
 import { fetchGroups, type Group } from '@/services/groupsService'
@@ -36,6 +37,7 @@ const emptyForm = {
 
 export default function StudentsPage() {
   const { students, addStudent, updateStudent, removeStudent, resetPassword } = useData()
+  const { user } = useAuth() // 👈 عشان نعرف المسار
   const { toast } = useToast()
 
   const [query, setQuery] = useState('')
@@ -44,6 +46,9 @@ export default function StudentsPage() {
   const [form, setForm] = useState(emptyForm)
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
   const [groups, setGroups] = useState<Group[]>([])
+
+  // 👈 بنحدد المسار (للمدرس أو للمساعد)
+  const basePath = user?.role === 'Assistant' ? '/assistant' : '/teacher'
 
   useEffect(() => {
     fetchGroups()
@@ -145,7 +150,6 @@ export default function StudentsPage() {
     }
   }
 
-  // دالة مساعدة لعرض اسم المجموعة
   function groupName(id?: string | null) {
     if (!id) return null
     return groups.find((g) => g.id === id)?.name || null
@@ -193,7 +197,7 @@ export default function StudentsPage() {
                           <AvatarFallback className="text-xs">{initials(s.name)}</AvatarFallback>
                         </Avatar>
                         <div>
-                          <Link to={`/teacher/students/${s.id}`} className="font-semibold hover:text-[var(--color-brand-600)] hover:underline">{s.name}</Link>
+                          <Link to={`${basePath}/students/${s.id}`} className="font-semibold hover:text-[var(--color-brand-600)] hover:underline">{s.name}</Link>
                           <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
                             @{s.username}
                           </p>
@@ -220,6 +224,13 @@ export default function StudentsPage() {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-1">
+                        {/* 👈 زرار التقرير الجديد */}
+                        <Button size="icon" variant="ghost" asChild title="تقرير شامل">
+                          <Link to={`${basePath}/students/${s.id}/report`}>
+                            <FileText className="h-4 w-4 text-emerald-600" />
+                          </Link>
+                        </Button>
+
                         <Button size="icon" variant="ghost" onClick={() => handleReset(s)} title="إعادة تعيين كلمة المرور">
                           <KeyRound className="h-4 w-4" />
                         </Button>
