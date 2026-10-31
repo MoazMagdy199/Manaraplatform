@@ -82,9 +82,10 @@ export default function TeacherLessonsPage() {
     setUploadingImages(true)
     try {
       // شيلنا الباراميتر التاني من uploadFile عشان الخطأ اللي كان في الصورة
-      const urls = await Promise.all(
-       Array.from(files).map((file) => uploadFile(file, 'lessons'))
-      )
+      const results = await Promise.all(
+  Array.from(files).map((file) => uploadFile(file, 'lessons'))
+)
+const urls = results.map(r => r.url)
       
       // ضفنا as any عشان نمنع خطأ TypeScript اللي كان تحت
       setForm((prev) => ({
