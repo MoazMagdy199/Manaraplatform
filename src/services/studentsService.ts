@@ -60,26 +60,13 @@ export interface UpdateStudentInput {
   newPassword?: string
 }
 
-// 🎯 التعديل المباشر (بدون Edge Function) لحل مشكلة 401
+// 🎯 رجعنا نستخدم الـ Edge Function عشان تحدث بيانات الـ Auth
 export async function updateStudent(id: string, input: UpdateStudentInput): Promise<User> {
-  // 1) تحديث البيانات في جدول profiles
-  const { data, error } = await supabase
-    .from('profiles')
-    .update({
-      name: input.name,
-      username: input.username,
-      email: input.email,
-      phone: input.phone,
-      grade: input.grade,
-      group_id: input.groupId || null,
-      parent_name: input.parentName || null,
-      parent_phone: input.parentPhone || null,
-    })
-    .eq('id', id)
-    .select()
-    .single()
-
+  const { data, error } = await supabase.functions.invoke('update-student', {
+    body: { studentId: id, ...input },
+  })
   if (error) throw new Error(extractSupabaseError(error, 'تعذّر تحديث بيانات الطالب'))
+  if (data?.message && !data?.id) throw new Error(data.message)
   return mapRow(data)
 }
 
