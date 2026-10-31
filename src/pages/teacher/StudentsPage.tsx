@@ -19,9 +19,8 @@ import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { initials } from '@/lib/utils'
 import { fetchGroups, type Group } from '@/services/groupsService'
+import { GRADES } from '@/lib/constants' // 👈 ضفنا GRADES من الكونستانت
 import type { User } from '@/types'
-
-const grades = ['الصف الأول الثانوي', 'الصف الثاني الثانوي', 'الصف الثالث الثانوي']
 
 const emptyForm = {
   name: '',
@@ -29,7 +28,7 @@ const emptyForm = {
   password: '',
   phone: '',
   email: '',
-  grade: grades[0],
+  grade: GRADES[0] as string, 
   groupId: null as string | null,
   parentName: '',
   parentPhone: '',
@@ -41,6 +40,10 @@ export default function StudentsPage() {
   const { toast } = useToast()
 
   const [query, setQuery] = useState('')
+  // 👈 حالات الفلترة الجديدة
+  const [gradeFilter, setGradeFilter] = useState<string>('')
+  const [groupFilter, setGroupFilter] = useState<string>('')
+
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<User | null>(null)
   const [form, setForm] = useState(emptyForm)
@@ -55,14 +58,29 @@ export default function StudentsPage() {
       .catch(() => setGroups([]))
   }, [])
 
-  const filtered = useMemo(
-    () =>
-      students.filter(
-        (s) =>
-          s.name.includes(query) || s.username.includes(query) || s.email.toLowerCase().includes(query.toLowerCase()),
-      ),
-    [students, query],
-  )
+  // 👈 تحديث دالة الفلترة عشان تشمل الصف والمجموعة
+  const filtered = useMemo(() => {
+    return students.filter((s) => {
+      // فلتر البحث بالاسم
+      const matchesSearch = 
+        s.name.includes(query) || 
+        s.username.includes(query) || 
+        s.email.toLowerCase().includes(query.toLowerCase())
+
+      // فلتر الصف
+      const matchesGrade = gradeFilter ? s.grade === gradeFilter : true
+
+      // فلتر المجموعة
+      let matchesGroup = true
+      if (groupFilter === '__none__') {
+        matchesGroup = s.groupId === null
+      } else if (groupFilter) {
+        matchesGroup = s.groupId === groupFilter
+      }
+
+      return matchesSearch && matchesGrade && matchesGroup
+    })
+  }, [students, query, gradeFilter, groupFilter])
 
   function openAdd() {
     setEditing(null)
@@ -78,7 +96,7 @@ export default function StudentsPage() {
       password: '',
       phone: s.phone,
       email: s.email,
-      grade: s.grade || grades[0],
+      grade: s.grade || GRADES[0],
       groupId: s.groupId || null,
       parentName: s.parentName || '',
       parentPhone: s.parentPhone || '',
@@ -168,10 +186,52 @@ export default function StudentsPage() {
         </Button>
       </div>
 
-      <div className="relative max-w-sm">
-        <Search className="absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-ink-soft)]" />
-        <Input placeholder="ابحث بالاسم، اسم المستخدم أو البريد..." value={query} onChange={(e) => setQuery(e.target.value)} className="pr-10" />
-      </div>
+      {/* 👈 شريط البحث والفلاتر */}
+      <Card>
+        <CardContent className="p-5">
+          <div className="grid sm:grid-cols-3 gap-4">
+            <div>
+              <Label>بحث</Label>
+              <div className="relative">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-ink-soft)]" />
+                <Input 
+                  placeholder="بالاسم، اسم المستخدم أو البريد..." 
+                  value={query} 
+                  onChange={(e) => setQuery(e.target.value)} 
+                  className="pr-10" 
+                />
+              </div>
+            </div>
+            <div>
+              <Label>الصف</Label>
+              <select
+                value={gradeFilter}
+                onChange={(e) => setGradeFilter(e.target.value)}
+                className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
+              >
+                <option value="">كل الصفوف</option>
+                {GRADES.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <Label>المجموعة</Label>
+              <select
+                value={groupFilter}
+                onChange={(e) => setGroupFilter(e.target.value)}
+                className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
+              >
+                <option value="">كل المجموعات</option>
+                <option value="__none__">بدون مجموعة</option>
+                {groups.map((g) => (
+                  <option key={g.id} value={g.id}>{g.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardContent className="p-0">
@@ -223,7 +283,6 @@ export default function StudentsPage() {
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-1">
-                        {/* 👈 زرار التقرير (بيفتح في تاب جديد) */}
                         <Button size="icon" variant="ghost" asChild title="تقرير شامل">
                           <Link to={`${basePath}/students/${s.id}/report`} target="_blank" rel="noopener noreferrer">
                             <FileText className="h-4 w-4 text-emerald-600" />
@@ -291,7 +350,7 @@ export default function StudentsPage() {
                 onChange={(e) => setForm({ ...form, grade: e.target.value })}
                 className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
               >
-                {grades.map((g) => (
+                {GRADES.map((g) => (
                   <option key={g} value={g}>
                     {g}
                   </option>

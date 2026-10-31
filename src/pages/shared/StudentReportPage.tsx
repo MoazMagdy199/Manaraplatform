@@ -91,8 +91,7 @@ export default function StudentReportPage() {
       fullPhone = fullPhone.startsWith('0') ? `20${fullPhone.slice(1)}` : `20${fullPhone}`
     }
 
-    const message = `السلام عليكم، معاك منصة منارة التعليمية.\n\nمرفق لكم تقرير متابعة الطالب/ة: ${data?.student_name}\n\nيرجى التكرم بالاطلاع على التفاصيل (الحضور، الدرجات، والاشتراك).\n\nمع تحياتي،\nأ/ معاذ مجدي`
-    
+const message = `السلام عليكم، معاك سكرتيرة مستر معاذ مجدي.\n\nمرفق لكم تقرير متابعة الطالب/ة: ${data?.student_name}\n\nيرجى التكرم بالاطلاع على التفاصيل (الحضور، الدرجات، والاشتراك).\n\nمع تحياتي،\nسكرتيرة أ/ معاذ مجدي`    
     const url = `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`
     window.open(url, '_blank')
   }
