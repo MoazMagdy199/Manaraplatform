@@ -60,7 +60,6 @@ export interface UpdateStudentInput {
   newPassword?: string
 }
 
-// 🎯 رجعنا نستخدم الـ Edge Function عشان تحدث بيانات الـ Auth
 export async function updateStudent(id: string, input: UpdateStudentInput): Promise<User> {
   const { data, error } = await supabase.functions.invoke('update-student', {
     body: { studentId: id, ...input },
@@ -70,10 +69,15 @@ export async function updateStudent(id: string, input: UpdateStudentInput): Prom
   return mapRow(data)
 }
 
+// 🎯 الحذف المباشر من الداتابيز (للتخلص من مشكلة الـ Edge Function)
 export async function deleteStudent(id: string): Promise<void> {
-  const { data, error } = await supabase.functions.invoke('delete-student', { body: { studentId: id } })
-  if (error) throw new Error(extractSupabaseError(error, 'تعذّر حذف الطالب'))
-  if (data?.message && !data?.success) throw new Error(data.message)
+  // بنحاول نمسح من جدول profiles مباشرة
+  // (بسبب ON DELETE CASCADE، لو مسحنا من auth هيمسح البروفايل معاه)
+  const { error } = await supabase.from('profiles').delete().eq('id', id)
+  
+  if (error) {
+    throw new Error(extractSupabaseError(error, 'تعذّر حذف الطالب'))
+  }
 }
 
 export async function resetStudentPassword(id: string): Promise<string> {
