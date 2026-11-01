@@ -36,7 +36,7 @@ export default function TeacherQuizzesPage() {
   const [title, setTitle] = useState('')
   const [lessonId, setLessonId] = useState('')
   const [duration, setDuration] = useState(15)
-  const [isWeekly, setIsWeekly] = useState(false) // 👈 حالة الامتحان الأسبوعي
+  const [isWeekly, setIsWeekly] = useState(false)
   const [questions, setQuestions] = useState<QuizQuestion[]>([newQuestion()])
   const [deleteTarget, setDeleteTarget] = useState<Quiz | null>(null)
   const [viewResults, setViewResults] = useState<Quiz | null>(null)
@@ -98,13 +98,19 @@ export default function TeacherQuizzesPage() {
   }
 
   async function handleSave() {
-    if (!title || !lessonId || questions.some((q) => !q.question || Object.values(q.options).some((o) => !o))) {
+    // لو الامتحان أسبوعي، مش شرط يكون فيه حصة (lessonId)
+    if (!title || (!isWeekly && !lessonId) || questions.some((q) => !q.question || Object.values(q.options).some((o) => !o))) {
       toast({ title: 'يرجى تعبئة جميع بيانات الاختبار والأسئلة', variant: 'error' })
       return
     }
     try {
-      // 👈 بنبعت isWeekly مع البيانات
-      await addQuiz({ title, lessonId, duration, questions, isWeekly })
+      await addQuiz({ 
+        title, 
+        lessonId: isWeekly ? null : lessonId, // 👈 لو أسبوعي، بنبعت null
+        duration, 
+        questions, 
+        isWeekly 
+      })
       toast({ title: isWeekly ? 'تم إنشاء الامتحان الأسبوعي بنجاح' : 'تم إنشاء الاختبار بنجاح', variant: 'success' })
       setDialogOpen(false)
     } catch {
@@ -144,10 +150,9 @@ export default function TeacherQuizzesPage() {
             <Card key={q.id} className={q.isWeekly ? 'border-amber-400 shadow-md' : ''}>
               <CardContent className="p-5">
                 <div className="flex items-start justify-between mb-2">
-                  <Badge variant="indigo">
-                    {q.lessonTitle}
+                  <Badge variant={q.isWeekly ? 'amber' : 'indigo'}>
+                    {q.isWeekly ? 'امتحان شامل' : q.lessonTitle}
                   </Badge>
-                  {/* 👈 تمييز الامتحان الأسبوعي */}
                   {q.isWeekly && (
                     <Badge variant="amber" className="flex items-center gap-1">
                       <Trophy className="h-3 w-3" /> أسبوعي
@@ -216,20 +221,24 @@ export default function TeacherQuizzesPage() {
                 <Label>المدة (دقيقة)</Label>
                 <Input type="number" min={1} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
               </div>
-              <div className="sm:col-span-3">
-                <Label>الحصة المرتبطة</Label>
-                <select
-                  value={lessonId}
-                  onChange={(e) => setLessonId(e.target.value)}
-                  className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
-                >
-                  {lessons.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.title}
-                    </option>
-                  ))}
-                </select>
-              </div>
+              
+              {/* 👈 قسم الحصة المرتبطة (بيختفي لو الامتحان أسبوعي) */}
+              {!isWeekly && (
+                <div className="sm:col-span-3">
+                  <Label>الحصة المرتبطة</Label>
+                  <select
+                    value={lessonId}
+                    onChange={(e) => setLessonId(e.target.value)}
+                    className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
+                  >
+                    {lessons.map((l) => (
+                      <option key={l.id} value={l.id}>
+                        {l.title}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* 👈 خيار الامتحان الأسبوعي */}

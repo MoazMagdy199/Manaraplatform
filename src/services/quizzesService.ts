@@ -38,19 +38,19 @@ export async function fetchQuizzes(): Promise<Quiz[]> {
 }
 
 export async function createQuiz(input: { 
-  lessonId: string
+  lessonId: string | null
   title: string
   duration: number
   questions: QuizQuestion[]
-  isWeekly?: boolean // 👈 تمت الإضافة
+  isWeekly?: boolean
 }): Promise<Quiz> {
   const { data: quizRow, error: quizErr } = await supabase
     .from('quizzes')
     .insert({ 
-      lesson_id: input.lessonId, 
+      lesson_id: input.lessonId || null, // 👈 بيقبل فاضي
       title: input.title, 
       duration_minutes: input.duration,
-      is_weekly: input.isWeekly || false // 👈 تمت الإضافة
+      is_weekly: input.isWeekly || false
     })
     .select('*, lesson:lessons(title)')
     .single()
@@ -72,12 +72,12 @@ export async function createQuiz(input: {
   const questions = await fetchQuestionsForQuiz(quizRow.id)
   return {
     id: quizRow.id,
-    lessonId: quizRow.lesson_id,
-    lessonTitle: quizRow.lesson?.title || '',
+    lessonId: quizRow.lesson_id || '',
+    lessonTitle: quizRow.lesson?.title || 'امتحان شامل',
     title: quizRow.title,
     duration: quizRow.duration_minutes,
     questions,
-    isWeekly: quizRow.is_weekly || false, // 👈 تمت الإضافة
+    isWeekly: quizRow.is_weekly || false,
     createdAt: quizRow.created_at,
   }
 }
