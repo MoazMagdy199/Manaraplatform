@@ -8,23 +8,30 @@ import { SubscriptionBanner } from '@/components/shared/SubscriptionBanner'
 import { useData } from '@/context/DataContext'
 import { timeAgo, formatDate } from '@/lib/utils'
 import { fetchMyAttendanceSummary } from '@/services/attendanceService'
+import { fetchMyExamResults, type MyExamResult } from '@/services/examsService' // 👈 ضفنا دي
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 export default function StudentDashboard() {
   const { user } = useAuth()
-  const { lessons, homework, announcements, grades, quizResults, quizzes } = useData()
+  const { lessons, homework, announcements, quizResults, quizzes } = useData()
+  
   const [attendance, setAttendance] = useState<Awaited<ReturnType<typeof fetchMyAttendanceSummary>> | null>(null)
+  const [examResults, setExamResults] = useState<MyExamResult[]>([]) // 👈 ضفنا دي
 
   useEffect(() => {
     fetchMyAttendanceSummary()
       .then(setAttendance)
       .catch(() => setAttendance(null))
+      
+    // 👈 بنجيب الامتحانات والدرجات هنا
+    fetchMyExamResults()
+      .then(setExamResults)
+      .catch(() => setExamResults([]))
   }, [])
 
   const latestLesson = lessons[0]
   const latestHomework = homework[0]
   const latestAnnouncement = announcements[0]
-  const myGrade = grades.find((g) => g.studentId === user?.id)
 
   const completedLessons = lessons.filter((l) => l.completedByStudent).length
   const progressPct = lessons.length ? Math.round((completedLessons / lessons.length) * 100) : 0
@@ -38,6 +45,12 @@ export default function StudentDashboard() {
     name: `أسبوع ${index + 1}`,
     score: Math.round((r.score / r.maxScore) * 100)
   }))
+
+  // 👈 حساب المعدل العام من جدول الامتحانات الجديد
+  const scoredExams = examResults.filter(r => r.score !== null)
+  const overallExamPct = scoredExams.length > 0 
+    ? Math.round(scoredExams.reduce((sum, r) => sum + (r.score! / r.maxScore) * 100, 0) / scoredExams.length) 
+    : null
 
   return (
     <div className="space-y-8">
@@ -136,26 +149,23 @@ export default function StudentDashboard() {
       )}
 
       <div className="grid md:grid-cols-2 gap-6">
+        {/* 👈 كارت درجاتي المعدل */}
         <Card>
           <CardContent className="p-6">
             <h3 className="font-display font-bold text-lg mb-4">درجاتي</h3>
-            {myGrade ? (
-              <div className="grid grid-cols-3 gap-3 text-center">
+            {overallExamPct !== null ? (
+              <div className="grid grid-cols-2 gap-3 text-center">
                 <div className="rounded-xl bg-black/[0.02] dark:bg-white/5 p-4">
                   <p className="font-display text-2xl font-extrabold text-[var(--color-brand-600)] dark:text-[var(--color-brand-300)]">
-                    {myGrade.homeworkAvg}%
+                    {overallExamPct}%
                   </p>
-                  <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1">الواجبات</p>
+                  <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1">المعدل العام</p>
                 </div>
                 <div className="rounded-xl bg-black/[0.02] dark:bg-white/5 p-4">
                   <p className="font-display text-2xl font-extrabold text-[var(--color-amber-600)]">
-                    {myGrade.quizAvg}%
+                    {scoredExams.length}
                   </p>
-                  <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1">الاختبارات</p>
-                </div>
-                <div className="rounded-xl bg-black/[0.02] dark:bg-white/5 p-4">
-                  <p className="font-display text-2xl font-extrabold">{myGrade.overall}%</p>
-                  <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1">المعدل العام</p>
+                  <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1">امتحانات مصححة</p>
                 </div>
               </div>
             ) : (
