@@ -13,17 +13,18 @@ export default function StudentQuizzesPage() {
   const myResults = quizResults.filter((r) => r.studentId === user?.id)
   const getResult = (quizId: string) => myResults.find((r) => r.quizId === quizId)
 
-  // 👈 فلترة الاختبارات عشان الطالب يشوف بس اللي تخصه
+  // 👈 الفلترة الجديدة: الطالب بيشوف الاختبارات اللي من غير مجموعة (عامة)
+  // أو اللي مجموعتها هي نفس مجموعته بالظبط
   const myQuizzes = quizzes.filter((q) => {
-    // 1) الاختبارات العادية (المرتبطة بحصة) بتظهر كلها في صفحة الاختبارات
-    //    (لأن الفلترة بتاعتها بتحصل في صفحة الحصة نفسها)
-    if (!q.isWeekly) return true
+    // 1) فلترة المجموعة: لو الاختبار تبع مجموعة معينة، والطالب مش في نفس المجموعة، اخفيه
+    if (q.groupId && q.groupId !== user?.groupId) {
+      return false
+    }
 
-    // 2) الاختبارات الأسبوعية بتظهر بس لو الصف بتاعها يطابق صف الطالب
-    if (q.grade && q.grade !== user?.grade) return false
-
-    // 3) لو الأسبوعي تبع مجموعة معينة، بتظهر بس لطلاب المجموعة دي
-    if (q.groupId && q.groupId !== user?.groupId) return false
+    // 2) فلترة الصف: لو الاختبار محدد لصف معين، والطالب مش في الصف ده، اخفيه
+    if (q.grade && q.grade !== user?.grade) {
+      return false
+    }
 
     return true
   })
