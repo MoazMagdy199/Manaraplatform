@@ -13,6 +13,21 @@ export default function StudentQuizzesPage() {
   const myResults = quizResults.filter((r) => r.studentId === user?.id)
   const getResult = (quizId: string) => myResults.find((r) => r.quizId === quizId)
 
+  // 👈 فلترة الاختبارات عشان الطالب يشوف بس اللي تخصه
+  const myQuizzes = quizzes.filter((q) => {
+    // 1) الاختبارات العادية (المرتبطة بحصة) بتظهر كلها في صفحة الاختبارات
+    //    (لأن الفلترة بتاعتها بتحصل في صفحة الحصة نفسها)
+    if (!q.isWeekly) return true
+
+    // 2) الاختبارات الأسبوعية بتظهر بس لو الصف بتاعها يطابق صف الطالب
+    if (q.grade && q.grade !== user?.grade) return false
+
+    // 3) لو الأسبوعي تبع مجموعة معينة، بتظهر بس لطلاب المجموعة دي
+    if (q.groupId && q.groupId !== user?.groupId) return false
+
+    return true
+  })
+
   return (
     <div className="space-y-6">
       <div>
@@ -23,7 +38,7 @@ export default function StudentQuizzesPage() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-5">
-        {quizzes.map((q) => {
+        {myQuizzes.map((q) => {
           const result = getResult(q.id)
           return (
             <Card key={q.id}>
@@ -57,6 +72,14 @@ export default function StudentQuizzesPage() {
             </Card>
           )
         })}
+        {myQuizzes.length === 0 && (
+          <Card className="md:col-span-2">
+            <CardContent className="p-14 text-center text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
+              <Sparkles className="h-10 w-10 mx-auto opacity-40 mb-3" />
+              لا توجد اختبارات متاحة لك حالياً
+            </CardContent>
+          </Card>
+        )}
       </div>
     </div>
   )
