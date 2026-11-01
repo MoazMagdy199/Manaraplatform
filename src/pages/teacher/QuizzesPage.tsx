@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
-
-import { Plus, Trash2, Sparkles, Users2, ClipboardPaste, Trophy } from 'lucide-react'
+import { Plus, Trash2, Sparkles, Users2, ClipboardPaste, Trophy, Eye } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,9 +16,10 @@ import {
 import { useData } from '@/context/DataContext'
 import { useToast } from '@/context/ToastContext'
 import { formatDate } from '@/lib/utils'
-import { fetchGroups, type Group } from '@/services/groupsService' // 👈 ضفنا دي
-import { GRADES } from '@/lib/constants' // 👈 ضفنا دي
-import type { Quiz, QuizQuestion } from '@/types'
+import { fetchGroups, type Group } from '@/services/groupsService'
+import { GRADES } from '@/lib/constants'
+import type { Quiz, QuizQuestion, QuizResult } from '@/types'
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
 
 function newQuestion(): QuizQuestion {
   return {
@@ -41,7 +41,6 @@ export default function TeacherQuizzesPage() {
   const [duration, setDuration] = useState(15)
   const [isWeekly, setIsWeekly] = useState(false)
   
-  // 👈 حالات الصف والمجموعة
   const [grade, setGrade] = useState<string>(GRADES[0])
   const [groupId, setGroupId] = useState<string | null>(null)
   const [groups, setGroups] = useState<Group[]>([])
@@ -50,15 +49,17 @@ export default function TeacherQuizzesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Quiz | null>(null)
   const [viewResults, setViewResults] = useState<Quiz | null>(null)
 
+  // 👈 عشان نعرض تفاصيل إجابة طالب معين
+  const [selectedStudentResult, setSelectedStudentResult] = useState<QuizResult | null>(null)
+
   const [pasteDialogOpen, setPasteDialogOpen] = useState(false)
   const [pasteText, setPasteText] = useState('')
 
-  // 👈 تحميل المجموعات
   useEffect(() => {
     fetchGroups()
       .then((all) => setGroups(all.filter((g) => !g.grade || g.grade === grade)))
       .catch(() => setGroups([]))
-    setGroupId(null) // تصفير المجموعة عند تغيير الصف
+    setGroupId(null)
   }, [grade])
 
   function openAdd() {
@@ -78,13 +79,10 @@ export default function TeacherQuizzesPage() {
 
   function handleProcessPaste() {
     if (!pasteText.trim()) return
-
     try {
       const blocks = pasteText.split('السؤال:').filter((b) => b.trim() !== '')
-      
       const newQuestions: QuizQuestion[] = blocks.map((block) => {
         const lines = block.split('\n').map((l) => l.trim()).filter((l) => l !== '')
-        
         const questionText = lines[0] || ''
         const a = lines.find((l) => l.startsWith('A)'))?.replace('A)', '').trim() || ''
         const b = lines.find((l) => l.startsWith('B)'))?.replace('B)', '').trim() || ''
@@ -128,8 +126,8 @@ export default function TeacherQuizzesPage() {
         duration, 
         questions, 
         isWeekly,
-        grade: isWeekly ? grade : null, // 👈 بنبعت الصف لو أسبوعي
-        groupId: isWeekly ? groupId : null, // 👈 بنبعت المجموعة لو أسبوعي
+        grade: isWeekly ? grade : null, 
+        groupId: isWeekly ? groupId : null, 
       })
       toast({ title: isWeekly ? 'تم إنشاء الامتحان الأسبوعي بنجاح' : 'تم إنشاء الاختبار بنجاح', variant: 'success' })
       setDialogOpen(false)
@@ -187,9 +185,9 @@ export default function TeacherQuizzesPage() {
                 </div>
                 <button
                   onClick={() => setViewResults(q)}
-                  className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-brand-600)] dark:text-[var(--color-brand-300)] mt-3"
+                  className="flex items-center gap-1.5 text-xs font-semibold text-[var(--color-brand-600)] dark:text-[var(--color-brand-300)] mt-3 hover:underline"
                 >
-                  <Users2 className="h-3.5 w-3.5" /> {results.length} طالب أنهى الاختبار
+                  <Users2 className="h-3.5 w-3.5" /> عرض إحصائيات {results.length} طالب
                 </button>
                 <div className="flex items-center gap-2 mt-4 pt-4 border-t border-black/5 dark:border-[var(--color-dark-border)]">
                   <Button size="sm" variant="ghost" className="hover:text-[var(--color-rose-500)] mr-auto" onClick={() => setDeleteTarget(q)}>
@@ -242,7 +240,6 @@ export default function TeacherQuizzesPage() {
                 <Input type="number" min={1} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
               </div>
               
-              {/* 👈 لو الامتحان عادي (غير أسبوعي) بيظهر اختيار الحصة */}
               {!isWeekly && (
                 <div className="sm:col-span-3">
                   <Label>الحصة المرتبطة</Label>
@@ -261,7 +258,6 @@ export default function TeacherQuizzesPage() {
               )}
             </div>
 
-            {/* 👈 خيار الامتحان الأسبوعي */}
             <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
               <input
                 type="checkbox"
@@ -275,14 +271,13 @@ export default function TeacherQuizzesPage() {
               </Label>
             </div>
 
-            {/* 👈 لو أسبوعي، بيظهر اختيار الصف والمجموعة */}
             {isWeekly && (
               <div className="grid sm:grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10">
                 <div>
                   <Label>الصف الدراسي</Label>
                   <select
                     value={grade}
-                    onChange={(e) => setGrade(e.target.value as string)} // 👈 التعديل هنا
+                    onChange={(e) => setGrade(e.target.value as string)}
                     className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
                   >
                     {GRADES.map((g) => (
@@ -413,29 +408,139 @@ export default function TeacherQuizzesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Results dialog */}
+      {/* Results dialog - التقرير الشامل */}
       <Dialog open={!!viewResults} onOpenChange={(o) => !o && setViewResults(null)}>
-        <DialogContent>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>نتائج اختبار: {viewResults?.title}</DialogTitle>
+            <DialogTitle className="text-xl">تقرير امتحان: {viewResults?.title}</DialogTitle>
+            <DialogDescription>
+              إحصائيات ودرجات الطلاب في هذا الاختبار
+            </DialogDescription>
           </DialogHeader>
-          <div className="space-y-2 max-h-80 overflow-y-auto">
-            {quizResults
-              .filter((r) => r.quizId === viewResults?.id)
-              .map((r) => {
-                const student = students.find((s) => s.id === r.studentId)
-                return (
-                  <div key={r.id} className="flex items-center justify-between rounded-lg bg-black/[0.02] dark:bg-white/5 p-3">
-                    <p className="text-sm font-medium">{student?.name}</p>
-                    <Badge variant={r.score / r.maxScore >= 0.5 ? 'success' : 'rose'}>
-                      {r.score} / {r.maxScore}
-                    </Badge>
+
+          {(() => {
+            const results = quizResults.filter((r) => r.quizId === viewResults?.id);
+            
+            if (results.length === 0) {
+              return <p className="text-sm text-center text-[var(--color-ink-soft)] py-6">لم يقم أي طالب بحل هذا الاختبار بعد</p>;
+            }
+
+            const scores = results.map(r => r.score);
+            const maxScore = results[0]?.maxScore || 0;
+            const avg = scores.reduce((a, b) => a + b, 0) / scores.length;
+            const highest = Math.max(...scores);
+            const lowest = Math.min(...scores);
+
+            const chartData = [
+              { name: 'أعلى درجة', score: highest },
+              { name: 'متوسط المجموعة', score: Number(avg.toFixed(1)) },
+              { name: 'أقل درجة', score: lowest },
+            ];
+
+            return (
+              <div className="space-y-6">
+                {/* ملخص الإحصائيات */}
+                <div className="grid grid-cols-3 gap-4">
+                  <Card className="bg-green-50 dark:bg-green-900/20 border-green-200">
+                    <CardContent className="p-4 text-center">
+                      <p className="text-sm text-green-700 dark:text-green-400 font-semibold mb-1">أعلى درجة</p>
+                      <p className="text-2xl font-bold text-green-800 dark:text-green-300">{highest} / {maxScore}</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-blue-50 dark:bg-blue-900/20 border-blue-200">
+                    <CardContent className="p-4 text-center">
+                      <p className="text-sm text-blue-700 dark:text-blue-400 font-semibold mb-1">متوسط المجموعة</p>
+                      <p className="text-2xl font-bold text-blue-800 dark:text-blue-300">{avg.toFixed(1)} / {maxScore}</p>
+                    </CardContent>
+                  </Card>
+                  <Card className="bg-rose-50 dark:bg-rose-900/20 border-rose-200">
+                    <CardContent className="p-4 text-center">
+                      <p className="text-sm text-rose-700 dark:text-rose-400 font-semibold mb-1">أقل درجة</p>
+                      <p className="text-2xl font-bold text-rose-800 dark:text-rose-300">{lowest} / {maxScore}</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* الرسم البياني */}
+                <Card>
+                  <CardContent className="p-4">
+                    <h3 className="font-bold text-center mb-4">مقارنة المستويات</h3>
+                    <div className="h-64 w-full" dir="ltr">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData} margin={{ top: 20, right: 30, left: 0, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                          <XAxis dataKey="name" tick={{ fill: 'currentColor', fontSize: 12 }} />
+                          <YAxis domain={[0, maxScore]} />
+                          <Tooltip cursor={{ fill: 'transparent' }} />
+                          <Bar dataKey="score" fill="#6366f1" radius={[4, 4, 0, 0]} barSize={60} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* قائمة الطلاب */}
+                <div>
+                  <h3 className="font-bold mb-3">درجات الطلاب (تنازلياً)</h3>
+                  <div className="space-y-2">
+                    {results.sort((a, b) => b.score - a.score).map((r) => {
+                      const student = students.find((s) => s.id === r.studentId);
+                      const percentage = (r.score / r.maxScore) * 100;
+                      return (
+                        <div key={r.id} className="flex items-center justify-between rounded-lg border border-black/5 dark:border-white/10 p-3">
+                          <div className="flex items-center gap-3">
+                            <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs ${percentage >= 50 ? 'bg-green-100 text-green-700' : 'bg-rose-100 text-rose-700'}`}>
+                              {percentage.toFixed(0)}%
+                            </div>
+                            <p className="text-sm font-medium">{student?.name || 'طالب محذوف'}</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Badge variant={percentage >= 50 ? 'success' : 'rose'}>
+                              {r.score} / {r.maxScore}
+                            </Badge>
+                            {/* زرار عرض إجابات الطالب */}
+                            <Button size="sm" variant="outline" onClick={() => setSelectedStudentResult(r)}>
+                              <Eye className="h-4 w-4 ml-1" /> الإجابات
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                )
-              })}
-            {quizResults.filter((r) => r.quizId === viewResults?.id).length === 0 && (
-              <p className="text-sm text-center text-[var(--color-ink-soft)] py-6">لم يقم أي طالب بحل هذا الاختبار بعد</p>
-            )}
+                </div>
+              </div>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog مراجعة إجابات طالب معين من وجهة نظر المدرس */}
+      <Dialog open={!!selectedStudentResult} onOpenChange={(o) => !o && setSelectedStudentResult(null)}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>مراجعة إجابات الطالب: {students.find(s => s.id === selectedStudentResult?.studentId)?.name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            {viewResults?.questions.map((q) => {
+              const studentAnswer = selectedStudentResult?.answers[q.id];
+              const isCorrect = studentAnswer === q.correctAnswer;
+              
+              return (
+                <Card key={q.id} className={isCorrect ? 'border-green-200' : 'border-rose-200'}>
+                  <CardContent className="p-4">
+                    <p className="font-semibold mb-2">{q.question}</p>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className={`p-2 rounded border ${isCorrect ? 'bg-green-50 border-green-200 text-green-700' : 'bg-rose-50 border-rose-200 text-rose-700'}`}>
+                        إجابة الطالب: {studentAnswer || 'لم يجب'}
+                      </div>
+                      <div className="p-2 rounded border bg-green-50 border-green-200 text-green-700">
+                        الإجابة الصحيحة: {q.correctAnswer}
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )
+            })}
           </div>
         </DialogContent>
       </Dialog>
