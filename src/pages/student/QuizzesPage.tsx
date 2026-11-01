@@ -13,20 +13,24 @@ export default function StudentQuizzesPage() {
   const myResults = quizResults.filter((r) => r.studentId === user?.id)
   const getResult = (quizId: string) => myResults.find((r) => r.quizId === quizId)
 
-  // 👈 الفلترة الجديدة: الطالب بيشوف الاختبارات اللي من غير مجموعة (عامة)
-  // أو اللي مجموعتها هي نفس مجموعته بالظبط
+  // 👈 الفلتر الصارم: لو الاختبار تبع مجموعة، والطالب مش في نفس المجموعة، يختفي فوراً
   const myQuizzes = quizzes.filter((q) => {
-    // 1) فلترة المجموعة: لو الاختبار تبع مجموعة معينة، والطالب مش في نفس المجموعة، اخفيه
+    // لو الطالب ملوش مجموعة مسجلة، يشوف الاختبارات العامة بس
+    if (!user?.groupId) {
+      return !q.groupId; 
+    }
+    
+    // لو الاختبار ليه مجموعة، لازم تكون نفس مجموعة الطالب
     if (q.groupId && q.groupId !== user?.groupId) {
-      return false
+      return false;
     }
 
-    // 2) فلترة الصف: لو الاختبار محدد لصف معين، والطالب مش في الصف ده، اخفيه
+    // فلترة الصف
     if (q.grade && q.grade !== user?.grade) {
-      return false
+      return false;
     }
 
-    return true
+    return true;
   })
 
   return (
