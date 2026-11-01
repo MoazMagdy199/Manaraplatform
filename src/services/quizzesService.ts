@@ -31,8 +31,8 @@ export async function fetchQuizzes(): Promise<Quiz[]> {
       duration: row.duration_minutes,
       questions,
       isWeekly: row.is_weekly || false,
-      grade: row.grade || null, // 👈 تمت الإضافة
-      groupId: row.group_id || null, // 👈 تمت الإضافة
+      grade: row.grade || null,
+      groupId: row.group_id || null,
       createdAt: row.created_at,
     })
   }
@@ -45,8 +45,8 @@ export async function createQuiz(input: {
   duration: number
   questions: QuizQuestion[]
   isWeekly?: boolean
-  grade?: string | null // 👈 تمت الإضافة
-  groupId?: string | null // 👈 تمت الإضافة
+  grade?: string | null
+  groupId?: string | null
 }): Promise<Quiz> {
   const { data: quizRow, error: quizErr } = await supabase
     .from('quizzes')
@@ -55,8 +55,8 @@ export async function createQuiz(input: {
       title: input.title, 
       duration_minutes: input.duration,
       is_weekly: input.isWeekly || false,
-      grade: input.grade || null, // 👈 تمت الإضافة
-      group_id: input.groupId || null // 👈 تمت الإضافة
+      grade: input.grade || null,
+      group_id: input.groupId || null
     })
     .select('*, lesson:lessons(title)')
     .single()
@@ -84,8 +84,8 @@ export async function createQuiz(input: {
     duration: quizRow.duration_minutes,
     questions,
     isWeekly: quizRow.is_weekly || false,
-    grade: quizRow.grade || null, // 👈 تمت الإضافة
-    groupId: quizRow.group_id || null, // 👈 تمت الإضافة
+    grade: quizRow.grade || null,
+    groupId: quizRow.group_id || null,
     createdAt: quizRow.created_at,
   }
 }
@@ -126,6 +126,29 @@ export async function submitQuiz(quizId: string, answers: Record<string, 'A' | '
 
   const { data, error } = await supabase.rpc('submit_quiz', { p_quiz_id: quizId, p_answers: payload })
   if (error) throw new Error(extractSupabaseError(error, 'تعذّر تسليم الاختبار'))
+
+  // 👈 كود إرسال الإشعار للمدرس
+  try {
+    const { data: authData } = await supabase.auth.getUser();
+    const studentName = authData.user?.user_metadata?.name || 'طالب';
+    
+    // بنجيب المدرس
+    const { data: teacher } = await supabase.from('profiles').select('id').eq('role', 'Teacher').limit(1).single();
+    
+    // بنجيب اسم الاختبار
+    const { data: quizData } = await supabase.from('quizzes').select('title').eq('id', quizId).single();
+
+    if (teacher && quizData) {
+      await supabase.from('notifications').insert({
+        user_id: teacher.id,
+        title: 'تسليم اختبار جديد 📝',
+        message: `الطالب ${studentName} قام بتسليم اختبار "${quizData.title}" وحصل على ${data.score} من ${data.max_score}`,
+        is_read: false
+      });
+    }
+  } catch (notifErr) {
+    console.error('Failed to send notification:', notifErr);
+  }
 
   return {
     id: data.id,
