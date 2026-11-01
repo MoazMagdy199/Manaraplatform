@@ -21,7 +21,7 @@ export interface Lesson {
   description: string
   content: string
   summary?: string | null 
-  summaryImages?: string[] | null // 👈 تمت الإضافة
+  summaryImages?: string[] | null 
   pdfUrl?: string
   videoUrl?: string
   imageUrl?: string
@@ -76,7 +76,7 @@ export interface QuizQuestion {
 
 export interface Quiz {
   id: string
-  lessonId: string
+  lessonId: string | null // 👈 تم التعديل (بيقبل null)
   lessonTitle: string
   title: string
   duration: number

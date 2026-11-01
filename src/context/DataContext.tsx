@@ -52,7 +52,8 @@ interface DataContextValue {
 
   // quizzes
   quizzes: Quiz[]
-addQuiz: (q: { lessonId: string | null; title: string; duration: number; questions: QuizQuestion[]; isWeekly?: boolean }) => Promise<void> 
+  addQuiz: (q: { lessonId: string | null; title: string; duration: number; questions: QuizQuestion[]; isWeekly?: boolean }) => Promise<void> 
+  removeQuiz: (id: string) => Promise<void>
   quizResults: QuizResult[]
   submitQuiz: (quizId: string, answers: Record<string, 'A' | 'B' | 'C' | 'D'>) => Promise<QuizResult>
 
