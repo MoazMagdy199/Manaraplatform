@@ -82,6 +82,7 @@ export interface Quiz {
   duration: number
   questions: QuizQuestion[]
   createdAt: string
+  isWeekly?: boolean
 }
 
 export interface QuizResult {

@@ -2,8 +2,6 @@ import { supabase, extractSupabaseError } from '@/lib/supabase'
 import type { Quiz, QuizQuestion, QuizResult } from '@/types'
 
 async function fetchQuestionsForQuiz(quizId: string): Promise<QuizQuestion[]> {
-  // This RPC hides correct_answer from a student until they've completed
-  // the quiz (or reveals it always for a teacher) — enforced server-side.
   const { data, error } = await supabase.rpc('get_quiz_questions_for_student', { p_quiz_id: quizId })
   if (error) throw new Error(extractSupabaseError(error))
   return (data || []).map((q: any) => ({
@@ -32,16 +30,28 @@ export async function fetchQuizzes(): Promise<Quiz[]> {
       title: row.title,
       duration: row.duration_minutes,
       questions,
+      isWeekly: row.is_weekly || false, // 👈 تمت الإضافة
       createdAt: row.created_at,
     })
   }
   return results
 }
 
-export async function createQuiz(input: { lessonId: string; title: string; duration: number; questions: QuizQuestion[] }): Promise<Quiz> {
+export async function createQuiz(input: { 
+  lessonId: string
+  title: string
+  duration: number
+  questions: QuizQuestion[]
+  isWeekly?: boolean // 👈 تمت الإضافة
+}): Promise<Quiz> {
   const { data: quizRow, error: quizErr } = await supabase
     .from('quizzes')
-    .insert({ lesson_id: input.lessonId, title: input.title, duration_minutes: input.duration })
+    .insert({ 
+      lesson_id: input.lessonId, 
+      title: input.title, 
+      duration_minutes: input.duration,
+      is_weekly: input.isWeekly || false // 👈 تمت الإضافة
+    })
     .select('*, lesson:lessons(title)')
     .single()
   if (quizErr) throw new Error(extractSupabaseError(quizErr))
@@ -67,6 +77,7 @@ export async function createQuiz(input: { lessonId: string; title: string; durat
     title: quizRow.title,
     duration: quizRow.duration_minutes,
     questions,
+    isWeekly: quizRow.is_weekly || false, // 👈 تمت الإضافة
     createdAt: quizRow.created_at,
   }
 }
@@ -100,8 +111,6 @@ export async function fetchMyQuizResults(): Promise<QuizResult[]> {
 }
 
 export async function submitQuiz(quizId: string, answers: Record<string, 'A' | 'B' | 'C' | 'D'>): Promise<QuizResult> {
-  // Scoring happens entirely server-side inside this function — the client
-  // never computes or sends a score, so it can't be forged.
   const payload = Object.entries(answers).map(([questionId, selected]) => ({
     question_id: questionId,
     selected,
@@ -120,7 +129,7 @@ export async function submitQuiz(quizId: string, answers: Record<string, 'A' | '
     answers,
   }
 }
-/** كل نتائج كل الطلاب في كل الاختبارات — للمدرس فقط (الصلاحية متحققة عبر RLS تلقائياً) */
+
 export async function fetchAllQuizResults(): Promise<QuizResult[]> {
   const { data, error } = await supabase
     .from('quiz_results')

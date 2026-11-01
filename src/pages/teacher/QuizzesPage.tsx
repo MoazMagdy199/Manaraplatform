@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Plus, Trash2, Sparkles, Users2, ClipboardPaste } from 'lucide-react'
+import { Plus, Trash2, Sparkles, Users2, ClipboardPaste, Trophy } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,11 +36,11 @@ export default function TeacherQuizzesPage() {
   const [title, setTitle] = useState('')
   const [lessonId, setLessonId] = useState('')
   const [duration, setDuration] = useState(15)
+  const [isWeekly, setIsWeekly] = useState(false) // 👈 حالة الامتحان الأسبوعي
   const [questions, setQuestions] = useState<QuizQuestion[]>([newQuestion()])
   const [deleteTarget, setDeleteTarget] = useState<Quiz | null>(null)
   const [viewResults, setViewResults] = useState<Quiz | null>(null)
 
-  // 👈 حالة زرار اللصق السريع
   const [pasteDialogOpen, setPasteDialogOpen] = useState(false)
   const [pasteText, setPasteText] = useState('')
 
@@ -48,6 +48,7 @@ export default function TeacherQuizzesPage() {
     setTitle('')
     setLessonId(lessons[0]?.id || '')
     setDuration(15)
+    setIsWeekly(false)
     setQuestions([newQuestion()])
     setDialogOpen(true)
   }
@@ -56,7 +57,6 @@ export default function TeacherQuizzesPage() {
     setQuestions((prev) => prev.map((q) => (q.id === id ? { ...q, ...patch } : q)))
   }
 
-  // 👈 دالة تحويل النص لأسئلة
   function handleProcessPaste() {
     if (!pasteText.trim()) return
 
@@ -103,8 +103,9 @@ export default function TeacherQuizzesPage() {
       return
     }
     try {
-      await addQuiz({ title, lessonId, duration, questions })
-      toast({ title: 'تم إنشاء الاختبار بنجاح', variant: 'success' })
+      // 👈 بنبعت isWeekly مع البيانات
+      await addQuiz({ title, lessonId, duration, questions, isWeekly })
+      toast({ title: isWeekly ? 'تم إنشاء الامتحان الأسبوعي بنجاح' : 'تم إنشاء الاختبار بنجاح', variant: 'success' })
       setDialogOpen(false)
     } catch {
       // error toast already shown by DataContext
@@ -126,7 +127,7 @@ export default function TeacherQuizzesPage() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="font-display text-2xl font-extrabold">الاختبارات</h2>
+          <h2 className="font-display text-2xl font-extrabold">الاختبارات والامتحانات</h2>
           <p className="text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1 text-sm">
             {quizzes.length} اختبار متاح للطلاب
           </p>
@@ -140,11 +141,19 @@ export default function TeacherQuizzesPage() {
         {quizzes.map((q) => {
           const results = quizResults.filter((r) => r.quizId === q.id)
           return (
-            <Card key={q.id}>
+            <Card key={q.id} className={q.isWeekly ? 'border-amber-400 shadow-md' : ''}>
               <CardContent className="p-5">
-                <Badge variant="indigo" className="mb-2">
-                  {q.lessonTitle}
-                </Badge>
+                <div className="flex items-start justify-between mb-2">
+                  <Badge variant="indigo">
+                    {q.lessonTitle}
+                  </Badge>
+                  {/* 👈 تمييز الامتحان الأسبوعي */}
+                  {q.isWeekly && (
+                    <Badge variant="amber" className="flex items-center gap-1">
+                      <Trophy className="h-3 w-3" /> أسبوعي
+                    </Badge>
+                  )}
+                </div>
                 <h3 className="font-display font-bold">{q.title}</h3>
                 <div className="flex items-center gap-4 text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-3">
                   <span>{q.questions.length} سؤال</span>
@@ -185,7 +194,6 @@ export default function TeacherQuizzesPage() {
           </DialogHeader>
           
           <div className="space-y-5">
-            {/* 👈 زرار اللصق السريع */}
             <div className="flex justify-end">
               <Button 
                 type="button" 
@@ -222,6 +230,20 @@ export default function TeacherQuizzesPage() {
                   ))}
                 </select>
               </div>
+            </div>
+
+            {/* 👈 خيار الامتحان الأسبوعي */}
+            <div className="flex items-center gap-3 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+              <input
+                type="checkbox"
+                id="weekly-checkbox"
+                checked={isWeekly}
+                onChange={(e) => setIsWeekly(e.target.checked)}
+                className="h-5 w-5 accent-amber-600 rounded cursor-pointer"
+              />
+              <Label htmlFor="weekly-checkbox" className="cursor-pointer font-semibold text-amber-800 dark:text-amber-400">
+                هل هذا الامتحان الأسبوعي الشامل؟ (Weekly Exam)
+              </Label>
             </div>
 
             <div className="space-y-4">
@@ -278,7 +300,7 @@ export default function TeacherQuizzesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* 👈 Dialog لصق الأسئلة */}
+      {/* Dialog لصق الأسئلة */}
       <Dialog open={pasteDialogOpen} onOpenChange={setPasteDialogOpen}>
         <DialogContent className="max-w-xl">
           <DialogHeader>
