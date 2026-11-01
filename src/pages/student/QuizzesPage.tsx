@@ -8,29 +8,29 @@ import { useAuth } from '@/context/AuthContext'
 
 export default function StudentQuizzesPage() {
   const { user } = useAuth()
-  const { quizzes, quizResults } = useData()
+  const { quizzes, quizResults, lessons } = useData() // 👈 ضفنا lessons هنا
 
   const myResults = quizResults.filter((r) => r.studentId === user?.id)
   const getResult = (quizId: string) => myResults.find((r) => r.quizId === quizId)
 
-  // 👈 الفلتر الصارم: لو الاختبار تبع مجموعة، والطالب مش في نفس المجموعة، يختفي فوراً
   const myQuizzes = quizzes.filter((q) => {
-    // لو الطالب ملوش مجموعة مسجلة، يشوف الاختبارات العامة بس
-    if (!user?.groupId) {
-      return !q.groupId; 
+    // 1. لو الاختبار مربوط بحصة (درس) معين
+    if (q.lessonId) {
+      // نتأكد إن الطالب عنده الحصة دي في القائمة بتاعته أصلاً
+      const lessonExists = lessons.some((l) => l.id === q.lessonId)
+      return lessonExists // لو الحصة مش عنده، يبقى الاختبار مش هيظهر
     }
-    
-    // لو الاختبار ليه مجموعة، لازم تكون نفس مجموعة الطالب
+
+    // 2. لو الاختبار مش مربوط بحصة (اختبار أسبوعي أو شامل)
+    // هنا نطبق شرط المجموعة والصف
     if (q.groupId && q.groupId !== user?.groupId) {
       return false;
     }
-
-    // فلترة الصف
     if (q.grade && q.grade !== user?.grade) {
       return false;
     }
 
-    return true;
+    return true
   })
 
   return (
@@ -60,7 +60,7 @@ export default function StudentQuizzesPage() {
                 </div>
                 <h3 className="font-display font-bold mt-4">{q.title}</h3>
                 <p className="text-sm text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1">
-                  {q.lessonTitle}
+                  {q.lessonTitle || 'اختبار شامل'}
                 </p>
                 <div className="flex items-center gap-4 mt-4 text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
                   <span className="flex items-center gap-1">
