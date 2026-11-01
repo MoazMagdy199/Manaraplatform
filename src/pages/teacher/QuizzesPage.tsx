@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+
 import { Plus, Trash2, Sparkles, Users2, ClipboardPaste, Trophy } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -16,6 +17,8 @@ import {
 import { useData } from '@/context/DataContext'
 import { useToast } from '@/context/ToastContext'
 import { formatDate } from '@/lib/utils'
+import { fetchGroups, type Group } from '@/services/groupsService' // 👈 ضفنا دي
+import { GRADES } from '@/lib/constants' // 👈 ضفنا دي
 import type { Quiz, QuizQuestion } from '@/types'
 
 function newQuestion(): QuizQuestion {
@@ -37,6 +40,12 @@ export default function TeacherQuizzesPage() {
   const [lessonId, setLessonId] = useState('')
   const [duration, setDuration] = useState(15)
   const [isWeekly, setIsWeekly] = useState(false)
+  
+  // 👈 حالات الصف والمجموعة
+  const [grade, setGrade] = useState<string>(GRADES[0])
+  const [groupId, setGroupId] = useState<string | null>(null)
+  const [groups, setGroups] = useState<Group[]>([])
+
   const [questions, setQuestions] = useState<QuizQuestion[]>([newQuestion()])
   const [deleteTarget, setDeleteTarget] = useState<Quiz | null>(null)
   const [viewResults, setViewResults] = useState<Quiz | null>(null)
@@ -44,11 +53,21 @@ export default function TeacherQuizzesPage() {
   const [pasteDialogOpen, setPasteDialogOpen] = useState(false)
   const [pasteText, setPasteText] = useState('')
 
+  // 👈 تحميل المجموعات
+  useEffect(() => {
+    fetchGroups()
+      .then((all) => setGroups(all.filter((g) => !g.grade || g.grade === grade)))
+      .catch(() => setGroups([]))
+    setGroupId(null) // تصفير المجموعة عند تغيير الصف
+  }, [grade])
+
   function openAdd() {
     setTitle('')
     setLessonId(lessons[0]?.id || '')
     setDuration(15)
     setIsWeekly(false)
+    setGrade(GRADES[0])
+    setGroupId(null)
     setQuestions([newQuestion()])
     setDialogOpen(true)
   }
@@ -98,7 +117,6 @@ export default function TeacherQuizzesPage() {
   }
 
   async function handleSave() {
-    // لو الامتحان أسبوعي، مش شرط يكون فيه حصة (lessonId)
     if (!title || (!isWeekly && !lessonId) || questions.some((q) => !q.question || Object.values(q.options).some((o) => !o))) {
       toast({ title: 'يرجى تعبئة جميع بيانات الاختبار والأسئلة', variant: 'error' })
       return
@@ -106,15 +124,17 @@ export default function TeacherQuizzesPage() {
     try {
       await addQuiz({ 
         title, 
-        lessonId: isWeekly ? null : lessonId, // 👈 لو أسبوعي، بنبعت null
+        lessonId: isWeekly ? null : lessonId, 
         duration, 
         questions, 
-        isWeekly 
+        isWeekly,
+        grade: isWeekly ? grade : null, // 👈 بنبعت الصف لو أسبوعي
+        groupId: isWeekly ? groupId : null, // 👈 بنبعت المجموعة لو أسبوعي
       })
       toast({ title: isWeekly ? 'تم إنشاء الامتحان الأسبوعي بنجاح' : 'تم إنشاء الاختبار بنجاح', variant: 'success' })
       setDialogOpen(false)
     } catch {
-      // error toast already shown by DataContext
+      // error
     }
   }
 
@@ -125,7 +145,7 @@ export default function TeacherQuizzesPage() {
       toast({ title: `تم حذف اختبار "${deleteTarget.title}"`, variant: 'success' })
       setDeleteTarget(null)
     } catch {
-      // error toast already shown by DataContext
+      // error
     }
   }
 
@@ -222,7 +242,7 @@ export default function TeacherQuizzesPage() {
                 <Input type="number" min={1} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
               </div>
               
-              {/* 👈 قسم الحصة المرتبطة (بيختفي لو الامتحان أسبوعي) */}
+              {/* 👈 لو الامتحان عادي (غير أسبوعي) بيظهر اختيار الحصة */}
               {!isWeekly && (
                 <div className="sm:col-span-3">
                   <Label>الحصة المرتبطة</Label>
@@ -254,6 +274,37 @@ export default function TeacherQuizzesPage() {
                 هل هذا الامتحان الأسبوعي الشامل؟ (Weekly Exam)
               </Label>
             </div>
+
+            {/* 👈 لو أسبوعي، بيظهر اختيار الصف والمجموعة */}
+            {isWeekly && (
+              <div className="grid sm:grid-cols-2 gap-4 p-4 bg-gray-50 dark:bg-white/5 rounded-xl border border-black/5 dark:border-white/10">
+                <div>
+                  <Label>الصف الدراسي</Label>
+                  <select
+                    value={grade}
+                    onChange={(e) => setGrade(e.target.value as string)} // 👈 التعديل هنا
+                    className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
+                  >
+                    {GRADES.map((g) => (
+                      <option key={g} value={g}>{g}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label>المجموعة (اختياري)</Label>
+                  <select
+                    value={groupId || ''}
+                    onChange={(e) => setGroupId(e.target.value || null)}
+                    className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
+                  >
+                    <option value="">كل المجموعات</option>
+                    {groups.map((g) => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
 
             <div className="space-y-4">
               {questions.map((q, idx) => (

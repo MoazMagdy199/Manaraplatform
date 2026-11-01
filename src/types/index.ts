@@ -83,6 +83,8 @@ export interface Quiz {
   questions: QuizQuestion[]
   createdAt: string
   isWeekly?: boolean
+  grade?: string | null
+  groupId?: string | null
 }
 
 export interface QuizResult {

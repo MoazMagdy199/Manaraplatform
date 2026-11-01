@@ -30,7 +30,9 @@ export async function fetchQuizzes(): Promise<Quiz[]> {
       title: row.title,
       duration: row.duration_minutes,
       questions,
-      isWeekly: row.is_weekly || false, // 👈 تمت الإضافة
+      isWeekly: row.is_weekly || false,
+      grade: row.grade || null, // 👈 تمت الإضافة
+      groupId: row.group_id || null, // 👈 تمت الإضافة
       createdAt: row.created_at,
     })
   }
@@ -43,14 +45,18 @@ export async function createQuiz(input: {
   duration: number
   questions: QuizQuestion[]
   isWeekly?: boolean
+  grade?: string | null // 👈 تمت الإضافة
+  groupId?: string | null // 👈 تمت الإضافة
 }): Promise<Quiz> {
   const { data: quizRow, error: quizErr } = await supabase
     .from('quizzes')
     .insert({ 
-      lesson_id: input.lessonId || null, // 👈 بيقبل فاضي
+      lesson_id: input.lessonId || null,
       title: input.title, 
       duration_minutes: input.duration,
-      is_weekly: input.isWeekly || false
+      is_weekly: input.isWeekly || false,
+      grade: input.grade || null, // 👈 تمت الإضافة
+      group_id: input.groupId || null // 👈 تمت الإضافة
     })
     .select('*, lesson:lessons(title)')
     .single()
@@ -78,6 +84,8 @@ export async function createQuiz(input: {
     duration: quizRow.duration_minutes,
     questions,
     isWeekly: quizRow.is_weekly || false,
+    grade: quizRow.grade || null, // 👈 تمت الإضافة
+    groupId: quizRow.group_id || null, // 👈 تمت الإضافة
     createdAt: quizRow.created_at,
   }
 }
