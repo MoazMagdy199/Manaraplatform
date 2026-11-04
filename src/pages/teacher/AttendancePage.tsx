@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react'
-import { CalendarCheck, Check, X, Settings2, Users } from 'lucide-react'
+import { useEffect, useState, useRef } from 'react'
+import { CalendarCheck, Check, X, Settings2, Users, UploadCloud } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -46,7 +46,7 @@ export default function AttendancePage() {
   const [grade, setGrade] = useState<string>(GRADES[0])
   const [date, setDate] = useState(todayISO())
   const [groupId, setGroupId] = useState<string | null>(null)
-const [groups, setGroups] = useState<Group[]>([])
+  const [groups, setGroups] = useState<Group[]>([])
   const [rows, setRows] = useState<AttendanceRow[]>([])
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -55,9 +55,9 @@ const [groups, setGroups] = useState<Group[]>([])
   const [scheduleDays, setScheduleDays] = useState<Set<number>>(new Set())
   const [loadingSchedule, setLoadingSchedule] = useState(false)
   const [savingSchedule, setSavingSchedule] = useState(false)
-  const currentSummary = attendanceSummary.filter(
-  (student) => student.grade === grade,
-)
+
+  const fileInputRef = useRef<HTMLInputElement>(null) // 👈 عشان نفتح ملف الـ CSV
+
   async function loadAttendance() {
     setLoading(true)
     try {
@@ -70,21 +70,18 @@ const [groups, setGroups] = useState<Group[]>([])
     }
   }
 
-  // حمّل المجموعات المتاحة للصف المختار
-useEffect(() => {
-  fetchGroups()
-    .then((all) => setGroups(all.filter((g) => !g.grade || g.grade === grade)))
-    .catch(() => setGroups([]))
-  // لو الصف اتغير، ارجع المجموعة لـ "بدون مجموعة"
-  setGroupId(null)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [grade])
+  useEffect(() => {
+    fetchGroups()
+      .then((all) => setGroups(all.filter((g) => !g.grade || g.grade === grade)))
+      .catch(() => setGroups([]))
+    setGroupId(null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grade])
 
-// حمّل الحضور لما أي حاجة تتغير (الصف، التاريخ، أو المجموعة)
-useEffect(() => {
-  loadAttendance()
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-}, [grade, date, groupId])
+  useEffect(() => {
+    loadAttendance()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [grade, date, groupId])
 
   function setStatus(studentId: string, status: AttendanceStatus) {
     setRows((prev) => prev.map((r) => (r.studentId === studentId ? { ...r, status } : r)))
@@ -112,6 +109,63 @@ useEffect(() => {
     } finally {
       setSaving(false)
     }
+  }
+
+  // 👈 دالة استيراد ملف الـ CSV
+  const handleCSVImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const text = event.target?.result as string
+      if (!text) return
+
+      // بنقسم الملف لأسطر
+      const lines = text.split('\n').map((line) => line.trim()).filter(Boolean)
+      if (lines.length < 2) return toast({ title: 'الملف فاضي أو غير صالح', variant: 'error' })
+
+      // بنشيل السطر الأول (العناوين Data,Timestamp)
+      const dataLines = lines.slice(1)
+      
+      const scannedUsernames = new Set<string>()
+      
+      dataLines.forEach((line) => {
+        // التطبيق بيطلع الداتا بين علامات تنصيص (") وبعدها التاريخ
+        const parts = line.split(',')
+        if (parts.length >= 1) {
+          const username = parts[0].replace(/"/g, '').trim() // بنشيل علامات التنصيص
+          if (username) {
+            // ممكن هنا نتأكد من التاريخ لو حبينا، بس هنعتمد إنه مسحهم النهاردة
+            scannedUsernames.add(username)
+          }
+        }
+      })
+
+      // دلوقتي بنعلم الطلاب اللي في الصفحة كـ "حاضر" لو اسمهم موجود في الاسكان
+      let matchCount = 0
+      setRows((prevRows) =>
+        prevRows.map((row) => {
+          if (scannedUsernames.has(row.username)) {
+            matchCount++
+            return { ...row, status: 'present' }
+          }
+          return row
+        })
+      )
+
+      // رسالة نجاح
+      setTimeout(() => {
+        toast({ 
+          title: `تم استيراد ${matchCount} طالب بنجاح`, 
+          description: 'اضغط على "حفظ الحضور" لتثبيت التغييرات.',
+          variant: 'success' 
+        })
+      }, 100)
+    }
+    
+    reader.readAsText(file)
+    e.target.value = '' // عشان نقدر نرفع نفس الملف تاني لو احتاجنا
   }
 
   async function openSchedule() {
@@ -161,46 +215,61 @@ useEffect(() => {
             سجّل حضور الطلاب يومياً حسب الصف
           </p>
         </div>
-        <Button variant="outline" onClick={openSchedule}>
-          <Settings2 className="h-4 w-4" /> الجدول الأسبوعي
-        </Button>
+        <div className="flex gap-2">
+          {/* 👈 زرار استيراد CSV */}
+          <input 
+            type="file" 
+            accept=".csv" 
+            className="hidden" 
+            ref={fileInputRef} 
+            onChange={handleCSVImport} 
+          />
+          <Button variant="default" onClick={() => fileInputRef.current?.click()}>
+            <UploadCloud className="h-4 w-4" /> استيراد حضور (أوفلاين)
+          </Button>
+          
+          <Button variant="outline" onClick={openSchedule}>
+            <Settings2 className="h-4 w-4" /> الجدول الأسبوعي
+          </Button>
+        </div>
       </div>
 
       <Card>
-  <CardContent className="p-5 grid sm:grid-cols-3 gap-4">
-    <div>
-      <Label>الصف الدراسي</Label>
-      <select
-        value={grade}
-        onChange={(e) => setGrade(e.target.value)}
-        className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
-      >
-        {GRADES.map((g) => (
-          <option key={g} value={g}>
-            {g}
-          </option>
-        ))}
-      </select>
-    </div>
-    <div>
-      <Label>المجموعة</Label>
-      <select
-        value={groupId || ''}
-        onChange={(e) => setGroupId(e.target.value || null)}
-        className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
-      >
-        <option value="">بدون مجموعة (الطلاب غير المعينين لمجموعة)</option>
-        {groups.map((g) => (
-          <option key={g.id} value={g.id}>{g.name}</option>
-        ))}
-      </select>
-    </div>
-    <div>
-      <Label>التاريخ</Label>
-      <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-    </div>
-  </CardContent>
-</Card>
+        <CardContent className="p-5 grid sm:grid-cols-3 gap-4">
+          <div>
+            <Label>الصف الدراسي</Label>
+            <select
+              value={grade}
+              onChange={(e) => setGrade(e.target.value)}
+              className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
+            >
+              {GRADES.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label>المجموعة</Label>
+            <select
+              value={groupId || ''}
+              onChange={(e) => setGroupId(e.target.value || null)}
+              className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
+            >
+              <option value="">بدون مجموعة (الطلاب غير المعينين لمجموعة)</option>
+              {groups.map((g) => (
+                <option key={g.id} value={g.id}>{g.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <Label>التاريخ</Label>
+            <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          </div>
+        </CardContent>
+      </Card>
+
       {!loading && rows.length > 0 && (
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-sm text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] flex items-center gap-1.5">

@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from 'react'
-import { Camera, Save, KeyRound } from 'lucide-react'
+import { Camera, Save, KeyRound, QrCode } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,6 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { initials } from '@/lib/utils'
+import QRCode from 'react-qr-code' // 👈 ضفنا دي
 
 export default function ProfilePage() {
   const { user, updateProfile, changePassword, updateAvatar } = useAuth()
@@ -28,7 +29,7 @@ export default function ProfilePage() {
 
   async function handleAvatarSelect(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
-    e.target.value = '' // allow re-selecting the same file later
+    e.target.value = ''
     if (!file) return
 
     setUploadingAvatar(true)
@@ -149,6 +150,29 @@ export default function ProfilePage() {
           </form>
         </CardContent>
       </Card>
+
+      {/* 👈 كارت الـ QR Code الجديد (للطلاب فقط) */}
+      {user.role === 'Student' && (
+        <Card>
+          <CardContent className="p-6 sm:p-8 flex flex-col items-center text-center">
+            <div className="h-12 w-12 rounded-full bg-[var(--color-brand-50)] flex items-center justify-center mb-4">
+              <QrCode className="h-6 w-6 text-[var(--color-brand-600)]" />
+            </div>
+            <h3 className="font-display font-bold text-lg mb-2">كود الحضور الخاص بك</h3>
+            <p className="text-sm text-[var(--color-ink-soft)] mb-6 max-w-sm">
+              اعرض هذا الكود للأسطى عند دخولك السنتر لتسجيل حضورك.
+            </p>
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-black/5">
+              <QRCode 
+                value={user.username || user.id} 
+                size={200} 
+                fgColor="#134e4a" // لون المنصة (تقدر تغيره)
+              />
+            </div>
+            <p className="mt-4 font-mono font-bold text-lg tracking-wider" dir="ltr">{user.username}</p>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="p-6 sm:p-8">
