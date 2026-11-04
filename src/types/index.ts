@@ -72,6 +72,7 @@ export interface QuizQuestion {
   options: { A: string; B: string; C: string; D: string }
   correctAnswer: 'A' | 'B' | 'C' | 'D'
   points: number
+  explanation?: string
 }
 
 export interface Quiz {

@@ -127,15 +127,11 @@ export async function submitQuiz(quizId: string, answers: Record<string, 'A' | '
   const { data, error } = await supabase.rpc('submit_quiz', { p_quiz_id: quizId, p_answers: payload })
   if (error) throw new Error(extractSupabaseError(error, 'تعذّر تسليم الاختبار'))
 
-  // 👈 كود إرسال الإشعار للمدرس
+  // إرسال الإشعار للمدرس
   try {
     const { data: authData } = await supabase.auth.getUser();
     const studentName = authData.user?.user_metadata?.name || 'طالب';
-    
-    // بنجيب المدرس
     const { data: teacher } = await supabase.from('profiles').select('id').eq('role', 'Teacher').limit(1).single();
-    
-    // بنجيب اسم الاختبار
     const { data: quizData } = await supabase.from('quizzes').select('title').eq('id', quizId).single();
 
     if (teacher && quizData) {
@@ -149,6 +145,9 @@ export async function submitQuiz(quizId: string, answers: Record<string, 'A' | '
   } catch (notifErr) {
     console.error('Failed to send notification:', notifErr);
   }
+
+  // بعد التسليم، بنمسح سجل المحاولة عشان لو المدرس فتحله الاختبار تاني يبقى محاولة جديدة
+  await supabase.from('quiz_attempts').delete().eq('quiz_id', quizId).eq('student_id', data.student_id)
 
   return {
     id: data.id,
@@ -179,4 +178,44 @@ export async function fetchAllQuizResults(): Promise<QuizResult[]> {
     ),
   }))
 }
+
+// ==========================================
+// 👈 دوال تتبع وقت الامتحان (الجديدة)
+// ==========================================
+
+// تسجيل بداية المحاولة
+export async function startQuizAttempt(quizId: string, durationMinutes: number) {
+  const { data: userData } = await supabase.auth.getUser()
+  if (!userData.user) throw new Error('يجب تسجيل الدخول')
+
+  const endsAt = new Date(Date.now() + durationMinutes * 60000).toISOString()
+
+  const { error } = await supabase.from('quiz_attempts').insert({
+    quiz_id: quizId,
+    student_id: userData.user.id,
+    ends_at: endsAt
+  })
+
+  if (error && !error.message.includes('duplicate key')) {
+    throw new Error(extractSupabaseError(error))
+  }
+  return endsAt
+}
+
+// جلب محاولة الطالب عشان نعرف الوقت المتبقي
+export async function getMyQuizAttempt(quizId: string) {
+  const { data: userData } = await supabase.auth.getUser()
+  if (!userData.user) return null
+
+  const { data, error } = await supabase
+    .from('quiz_attempts')
+    .select('*')
+    .eq('quiz_id', quizId)
+    .eq('student_id', userData.user.id)
+    .maybeSingle()
+
+  if (error) return null
+  return data
+}
+
 export type { Quiz }
