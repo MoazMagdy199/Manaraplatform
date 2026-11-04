@@ -147,7 +147,7 @@ export async function submitQuiz(quizId: string, answers: Record<string, 'A' | '
   }
 
   // بعد التسليم، بنمسح سجل المحاولة عشان لو المدرس فتحله الاختبار تاني يبقى محاولة جديدة
-  await supabase.from('quiz_attempts').delete().eq('quiz_id', quizId).eq('student_id', data.student_id)
+  // await supabase.from('quiz_attempts').delete().eq('quiz_id', quizId).eq('student_id', data.student_id)
 
   return {
     id: data.id,
