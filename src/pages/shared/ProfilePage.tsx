@@ -160,7 +160,7 @@ export default function ProfilePage() {
             </div>
             <h3 className="font-display font-bold text-lg mb-2">كود الحضور الخاص بك</h3>
             <p className="text-sm text-[var(--color-ink-soft)] mb-6 max-w-sm">
-              اعرض هذا الكود للأسطى عند دخولك السنتر لتسجيل حضورك.
+              اعرض هذا الكود للاسيستنت عند دخولك السنتر لتسجيل حضورك.
             </p>
             <div className="bg-white p-4 rounded-xl shadow-sm border border-black/5">
               <QRCode 
