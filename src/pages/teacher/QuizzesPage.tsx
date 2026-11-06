@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Plus, Trash2, Sparkles, Users2, ClipboardPaste, Trophy, Eye } from 'lucide-react'
+import { Plus, Trash2, Sparkles, Users2, ClipboardPaste, Trophy, Eye, RotateCcw } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -20,6 +20,7 @@ import { fetchGroups, type Group } from '@/services/groupsService'
 import { GRADES } from '@/lib/constants'
 import type { Quiz, QuizQuestion, QuizResult } from '@/types'
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts'
+import { resetStudentQuizAttempt } from '@/services/quizzesService'
 
 function newQuestion(): QuizQuestion {
   return {
@@ -32,7 +33,7 @@ function newQuestion(): QuizQuestion {
 }
 
 export default function TeacherQuizzesPage() {
-  const { quizzes, lessons, addQuiz, removeQuiz, quizResults, students } = useData()
+  const { quizzes, lessons, addQuiz, removeQuiz, quizResults, students, refetchAll } = useData()
   const { toast } = useToast()
 
   const [dialogOpen, setDialogOpen] = useState(false)
@@ -49,7 +50,6 @@ export default function TeacherQuizzesPage() {
   const [deleteTarget, setDeleteTarget] = useState<Quiz | null>(null)
   const [viewResults, setViewResults] = useState<Quiz | null>(null)
 
-  // 👈 عشان نعرض تفاصيل إجابة طالب معين
   const [selectedStudentResult, setSelectedStudentResult] = useState<QuizResult | null>(null)
 
   const [pasteDialogOpen, setPasteDialogOpen] = useState(false)
@@ -144,6 +144,20 @@ export default function TeacherQuizzesPage() {
       setDeleteTarget(null)
     } catch {
       // error
+    }
+  }
+
+  // 👈 دالة إعادة الامتحان
+  async function handleResetQuiz(studentId: string, studentName: string) {
+    if (!viewResults) return;
+    if (!window.confirm(`هل أنت متأكد من إعادة الاختبار للطالب ${studentName}؟ سيتم مسح نتيجته الحالية.`)) return;
+    
+    try {
+      await resetStudentQuizAttempt(viewResults.id, studentId);
+      toast({ title: 'تم إعادة الاختبار للطالب بنجاح', variant: 'success' });
+      await refetchAll();
+    } catch (err) {
+      toast({ title: 'حدث خطأ أثناء الإعادة', variant: 'error' });
     }
   }
 
@@ -439,7 +453,6 @@ export default function TeacherQuizzesPage() {
 
             return (
               <div className="space-y-6">
-                {/* ملخص الإحصائيات */}
                 <div className="grid grid-cols-3 gap-4">
                   <Card className="bg-green-50 dark:bg-green-900/20 border-green-200">
                     <CardContent className="p-4 text-center">
@@ -461,7 +474,6 @@ export default function TeacherQuizzesPage() {
                   </Card>
                 </div>
 
-                {/* الرسم البياني */}
                 <Card>
                   <CardContent className="p-4">
                     <h3 className="font-bold text-center mb-4">مقارنة المستويات</h3>
@@ -479,11 +491,10 @@ export default function TeacherQuizzesPage() {
                   </CardContent>
                 </Card>
 
-                {/* قائمة الطلاب */}
                 <div>
                   <h3 className="font-bold mb-3">درجات الطلاب (تنازلياً)</h3>
                   <div className="space-y-2">
-                    {results.sort((a, b) => b.score - a.score).map((r) => {
+                    {results.sort((a, b) => b.score - a.score).map((r, index) => {
                       const student = students.find((s) => s.id === r.studentId);
                       const percentage = (r.score / r.maxScore) * 100;
                       return (
@@ -492,15 +503,21 @@ export default function TeacherQuizzesPage() {
                             <div className={`h-8 w-8 rounded-full flex items-center justify-center font-bold text-xs ${percentage >= 50 ? 'bg-green-100 text-green-700' : 'bg-rose-100 text-rose-700'}`}>
                               {percentage.toFixed(0)}%
                             </div>
-                            <p className="text-sm font-medium">{student?.name || 'طالب محذوف'}</p>
+                            <div>
+                              <p className="text-sm font-medium">{student?.name || 'طالب محذوف'}</p>
+                              {index < 3 && <span className="text-xs text-amber-500 font-bold">🏆 من المتصدرين</span>}
+                            </div>
                           </div>
                           <div className="flex items-center gap-3">
                             <Badge variant={percentage >= 50 ? 'success' : 'rose'}>
                               {r.score} / {r.maxScore}
                             </Badge>
-                            {/* زرار عرض إجابات الطالب */}
                             <Button size="sm" variant="outline" onClick={() => setSelectedStudentResult(r)}>
                               <Eye className="h-4 w-4 ml-1" /> الإجابات
+                            </Button>
+                            {/* 👈 زرار إعادة الامتحان */}
+                            <Button size="sm" variant="outline" className="text-amber-600 border-amber-600 hover:bg-amber-50" onClick={() => handleResetQuiz(r.studentId, student?.name || 'الطالب')}>
+                              <RotateCcw className="h-4 w-4 ml-1" /> إعادة
                             </Button>
                           </div>
                         </div>
@@ -514,7 +531,7 @@ export default function TeacherQuizzesPage() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog مراجعة إجابات طالب معين من وجهة نظر المدرس */}
+      {/* Dialog مراجعة إجابات طالب معين */}
       <Dialog open={!!selectedStudentResult} onOpenChange={(o) => !o && setSelectedStudentResult(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>

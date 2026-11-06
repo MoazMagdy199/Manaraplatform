@@ -146,9 +146,6 @@ export async function submitQuiz(quizId: string, answers: Record<string, 'A' | '
     console.error('Failed to send notification:', notifErr);
   }
 
-  // بعد التسليم، بنمسح سجل المحاولة عشان لو المدرس فتحله الاختبار تاني يبقى محاولة جديدة
-  // await supabase.from('quiz_attempts').delete().eq('quiz_id', quizId).eq('student_id', data.student_id)
-
   return {
     id: data.id,
     quizId: data.quiz_id,
@@ -216,6 +213,27 @@ export async function getMyQuizAttempt(quizId: string) {
 
   if (error) return null
   return data
+}
+
+// 👈 دالة إعادة تعيين اختبار الطالب (للمدرس)
+export async function resetStudentQuizAttempt(quizId: string, studentId: string): Promise<void> {
+  // 1. مسح النتيجة
+  const { error: resultErr } = await supabase
+    .from('quiz_results')
+    .delete()
+    .eq('quiz_id', quizId)
+    .eq('student_id', studentId)
+  
+  if (resultErr) throw new Error(extractSupabaseError(resultErr))
+
+  // 2. مسح محاولة الوقت
+  const { error: attemptErr } = await supabase
+    .from('quiz_attempts')
+    .delete()
+    .eq('quiz_id', quizId)
+    .eq('student_id', studentId)
+
+  if (attemptErr) throw new Error(extractSupabaseError(attemptErr))
 }
 
 export type { Quiz }
