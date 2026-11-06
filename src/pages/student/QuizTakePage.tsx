@@ -8,7 +8,7 @@ import { useData } from '@/context/DataContext'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { startQuizAttempt, getMyQuizAttempt } from '@/services/quizzesService'
-import { supabase } from '@/lib/supabase' // 👈 ضفنا دي
+import { supabase } from '@/lib/supabase'
 
 function shuffleArray<T>(array: T[]): T[] {
   const arr = [...array]
@@ -57,6 +57,10 @@ export default function QuizTakePage() {
         setIsLoadingTimer(false)
         return
       }
+      
+      // بنحط وقت افتراضي فوراً عشان الصفحة متقفلش في وش الطالب
+      setTimeLeft(quiz.duration * 60)
+
       try {
         let attempt = await getMyQuizAttempt(quiz.id)
         
@@ -65,24 +69,22 @@ export default function QuizTakePage() {
           const now = Date.now()
           const remainingSeconds = Math.floor((endsAtTime - now) / 1000)
           
-          // لو الوقت فاضل، نكمل بيه عادي
           if (remainingSeconds > 0) {
+            // لو الوقت لسه فيه باقي، بنمشي عليه
             setTimeLeft(remainingSeconds)
-            setIsLoadingTimer(false)
-            return
           } else {
-            // لو الوقت خلص، بنمسح المحاولة القديمة ونعمل واحدة جديدة
+            // لو الوقت خلص، بنمسح القديم ونعمل واحد جديد
             await supabase.from('quiz_attempts').delete().eq('id', attempt.id)
+            await startQuizAttempt(quiz.id, quiz.duration)
+            setTimeLeft(quiz.duration * 60)
           }
+        } else {
+          // لو مفيش محاولة أصلاً، بنعمل واحدة جديدة
+          await startQuizAttempt(quiz.id, quiz.duration)
+          setTimeLeft(quiz.duration * 60)
         }
-        
-        // لو مفيش محاولة، أو مسحناها، نعمل واحدة جديدة
-        await startQuizAttempt(quiz.id, quiz.duration)
-        setTimeLeft(quiz.duration * 60)
-        
       } catch (err) {
-        console.error("Error fetching attempt:", err)
-        setTimeLeft(quiz.duration * 60)
+        console.error("Error in timer setup, using default time", err)
       } finally {
         setIsLoadingTimer(false)
       }
