@@ -8,6 +8,7 @@ import { useData } from '@/context/DataContext'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { startQuizAttempt, getMyQuizAttempt } from '@/services/quizzesService'
+import { supabase } from '@/lib/supabase' // 👈 ضفنا دي
 
 function shuffleArray<T>(array: T[]): T[] {
   const arr = [...array]
@@ -59,29 +60,28 @@ export default function QuizTakePage() {
       try {
         let attempt = await getMyQuizAttempt(quiz.id)
         
-        if (!attempt) {
-          await startQuizAttempt(quiz.id, quiz.duration)
-          attempt = await getMyQuizAttempt(quiz.id)
-        }
-        
         if (attempt) {
           const endsAtTime = new Date(attempt.ends_at).getTime()
           const now = Date.now()
-          const remainingSeconds = Math.max(0, Math.floor((endsAtTime - now) / 1000))
+          const remainingSeconds = Math.floor((endsAtTime - now) / 1000)
           
-          if (remainingSeconds === 0) {
-            setTimeLeft(0)
-            return;
+          // لو الوقت فاضل، نكمل بيه عادي
+          if (remainingSeconds > 0) {
+            setTimeLeft(remainingSeconds)
+            setIsLoadingTimer(false)
+            return
+          } else {
+            // لو الوقت خلص، بنمسح المحاولة القديمة ونعمل واحدة جديدة
+            await supabase.from('quiz_attempts').delete().eq('id', attempt.id)
           }
-          
-          setTimeLeft(remainingSeconds)
-        } else {
-          // Fallback لو فيه مشكلة في السيرفر
-          setTimeLeft(quiz.duration * 60)
         }
+        
+        // لو مفيش محاولة، أو مسحناها، نعمل واحدة جديدة
+        await startQuizAttempt(quiz.id, quiz.duration)
+        setTimeLeft(quiz.duration * 60)
+        
       } catch (err) {
         console.error("Error fetching attempt:", err)
-        // لو حصل إيرور، نعطيه الوقت الأصلي عشان ميقفلش في وشه
         setTimeLeft(quiz.duration * 60)
       } finally {
         setIsLoadingTimer(false)

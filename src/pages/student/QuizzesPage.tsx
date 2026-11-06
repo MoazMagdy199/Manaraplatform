@@ -1,20 +1,15 @@
-import { useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { Sparkles, Clock, CheckCircle2, HelpCircle, Trophy } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useData } from '@/context/DataContext'
 import { useAuth } from '@/context/AuthContext'
+import { supabase } from '@/lib/supabase' // 👈 ضفنا دي
 
 export default function StudentQuizzesPage() {
   const { user } = useAuth()
-  const { quizzes, quizResults, lessons, students, loading, refetchAll } = useData() 
-
-  // 👈 لما الصفحة تفتح، بنجبر السياق إنه يجيب الداتا الجديدة
-  useEffect(() => {
-    refetchAll()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  const { quizzes, quizResults, lessons, students } = useData() 
 
   const myResults = quizResults.filter((r) => r.studentId === user?.id)
   const getResult = (quizId: string) => myResults.find((r) => r.quizId === quizId)
@@ -41,13 +36,13 @@ export default function StudentQuizzesPage() {
       }))
   }
 
-  // 👈 لو لسه بنجيب الداتا، نعرض شاشة تحميل
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-64">
-        <div className="h-8 w-8 rounded-full border-4 border-[var(--color-brand-500)]/20 border-t-[var(--color-brand-500)] animate-spin" />
-      </div>
-    )
+  // 👈 دالة بتتأكد من مسح المحاولة القديمة قبل الدخول
+  const handleStartQuiz = async (e: React.MouseEvent, quizId: string) => {
+    e.preventDefault()
+    if (user) {
+      await supabase.from('quiz_attempts').delete().eq('quiz_id', quizId).eq('student_id', user.id)
+    }
+    window.location.href = `/student/quizzes/${quizId}`
   }
 
   return (
@@ -90,12 +85,18 @@ export default function StudentQuizzesPage() {
                   </span>
                 </div>
                 
-                <Button asChild className="w-full mt-5" variant={result ? 'outline' : 'default'}>
-                  {/* استخدمنا a href عشان نضمن إن الصفحة بتفتح من جديد */}
-                  <a href={`/student/quizzes/${q.id}`}>
-                    {result ? 'مراجعة الإجابات' : 'ابدأ الاختبار'}
-                  </a>
-                </Button>
+                {result ? (
+                  <Button asChild className="w-full mt-5" variant="outline">
+                    <Link to={`/student/quizzes/${q.id}`}>مراجعة الإجابات</Link>
+                  </Button>
+                ) : (
+                  <Button 
+                    onClick={(e) => handleStartQuiz(e, q.id)} 
+                    className="w-full mt-5" 
+                  >
+                    ابدأ الاختبار
+                  </Button>
+                )}
 
                 {q.isWeekly && leaders.length > 0 && (
                   <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/10">
