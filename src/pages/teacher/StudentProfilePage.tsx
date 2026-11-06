@@ -62,17 +62,14 @@ export default function StudentProfilePage() {
   const downloadQRPdf = () => {
     if (!student) return
 
-    // 1. نعمل canvas للـ QR
-    const qrCanvas = document.createElement('canvas')
-    const qrCode = new QRCodeCanvas({
-      value: student.username || student.id,
-      size: 400, // حجم كبير عشان الجودة
-      bgColor: "#ffffff",
-      fgColor: "#000000",
-      level: "H"
-    })
-    qrCanvas.appendChild(qrCode.canvas)
-    const imgData = qrCode.canvas.toDataURL('image/png')
+    // بنجيب عنصر الـ canvas اللي شغال في الصفحة حالياً
+    const canvas = document.getElementById('student-qr-canvas') as HTMLCanvasElement
+    if (!canvas) {
+      toast({ title: 'حدث خطأ في قراءة الكود', variant: 'error' })
+      return
+    }
+
+    const imgData = canvas.toDataURL('image/png')
 
     // 2. نعمل ملف الـ PDF
     const pdf = new jsPDF({
@@ -183,6 +180,7 @@ export default function StudentProfilePage() {
             <CardContent className="p-6 flex flex-col sm:flex-row items-center gap-6">
               <div className="bg-white p-3 rounded-2xl shadow-sm border border-black/5">
                 <QRCodeCanvas 
+                  id="student-qr-canvas"
                   value={student.username || student.id} 
                   size={140}
                   fgColor="#134e4a"
