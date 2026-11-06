@@ -8,7 +8,6 @@ import { useAuth } from '@/context/AuthContext'
 
 export default function StudentQuizzesPage() {
   const { user } = useAuth()
-  // 👈 ضفنا students عشان نجيب أسماء الطلاب للوحة الشرف
   const { quizzes, quizResults, lessons, students } = useData() 
 
   const myResults = quizResults.filter((r) => r.studentId === user?.id)
@@ -24,7 +23,6 @@ export default function StudentQuizzesPage() {
     return true
   })
 
-  // دالة بتجيب أفضل 5 طلاب في اختبار معين
   const getLeaderboard = (quizId: string) => {
     return quizResults
       .filter(r => r.quizId === quizId)
@@ -49,7 +47,7 @@ export default function StudentQuizzesPage() {
       <div className="grid md:grid-cols-2 gap-5">
         {myQuizzes.map((q) => {
           const result = getResult(q.id)
-          const leaders = q.isWeekly ? getLeaderboard(q.id) : [] // بنجيب الترتيب للاختبارات الأسبوعية بس
+          const leaders = q.isWeekly ? getLeaderboard(q.id) : []
 
           return (
             <Card key={q.id} className={q.isWeekly ? 'border-amber-200 shadow-sm' : ''}>
@@ -78,10 +76,12 @@ export default function StudentQuizzesPage() {
                 </div>
                 
                 <Button asChild className="w-full mt-5" variant={result ? 'outline' : 'default'}>
-                  <Link to={`/student/quizzes/${q.id}`}>{result ? 'مراجعة الإجابات' : 'ابدأ الاختبار'}</Link>
+                  {/* 👈 استخدمنا a href بدل Link عشان نعمل Refresh كامل ونمنع الكاش */}
+                  <a href={`/student/quizzes/${q.id}`}>
+                    {result ? 'مراجعة الإجابات' : 'ابدأ الاختبار'}
+                  </a>
                 </Button>
 
-                {/* 👈 لوحة الشرف (Top 5) للاختبارات الأسبوعية */}
                 {q.isWeekly && leaders.length > 0 && (
                   <div className="mt-4 pt-4 border-t border-black/5 dark:border-white/10">
                     <p className="text-xs font-bold text-[var(--color-ink-soft)] mb-3 flex items-center gap-1">

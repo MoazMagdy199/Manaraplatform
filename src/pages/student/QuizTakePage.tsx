@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, Navigate, Link } from 'react-router-dom'
 import { ArrowRight, ArrowLeft, CheckCircle2, XCircle, Trophy, Clock, Check } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
@@ -27,7 +27,9 @@ export default function QuizTakePage() {
   const quiz = quizzes.find((q) => q.id === id)
   const existingResult = quizResults.find((r) => r.quizId === id && r.studentId === user?.id)
 
+  // 👈 بنبدأ الإجابات فاضية دايماً عشان نمنع الإجابات القديمة تظهر
   const [answers, setAnswers] = useState<Record<string, 'A' | 'B' | 'C' | 'D'>>({})
+  
   const [submitted, setSubmitted] = useState(false)
   const [localResult, setLocalResult] = useState<{ score: number; maxScore: number } | null>(null)
   
@@ -49,7 +51,7 @@ export default function QuizTakePage() {
   const reviewMode = !!existingResult || submitted
   const displayAnswers = existingResult?.answers || answers
 
-  // ⏱️ 1. سحب الوقت من الداتابيز (عشان لو عمل Refresh ميرجعش من الأول)
+  // ⏱️ 1. سحب الوقت من الداتابيز
   useEffect(() => {
     async function checkAttempt() {
       if (!quiz || reviewMode) {
@@ -59,7 +61,6 @@ export default function QuizTakePage() {
       try {
         let attempt = await getMyQuizAttempt(quiz.id)
         
-        // لو مفيش محاولة مسجلة، نسجل واحدة جديدة
         if (!attempt) {
           await startQuizAttempt(quiz.id, quiz.duration)
           attempt = await getMyQuizAttempt(quiz.id)
@@ -69,6 +70,13 @@ export default function QuizTakePage() {
           const endsAtTime = new Date(attempt.ends_at).getTime()
           const now = Date.now()
           const remainingSeconds = Math.max(0, Math.floor((endsAtTime - now) / 1000))
+          
+          if (remainingSeconds === 0) {
+            setTimeLeft(0)
+            toast({ title: 'لقد انتهى وقت هذا الاختبار بالفعل.', variant: 'error' })
+            return;
+          }
+          
           setTimeLeft(remainingSeconds)
         }
       } catch (err) {
@@ -95,7 +103,7 @@ export default function QuizTakePage() {
     }, 1000)
 
     return () => clearInterval(timer)
-  }, [isLoadingTimer, reviewMode, timeLeft === null]) // عشان ميعملش ريسيت للعداد كل ثانية
+  }, [isLoadingTimer, reviewMode, timeLeft === null])
 
   // ⏱️ 3. تسليم تلقائي لما الوقت يخلص
   useEffect(() => {
