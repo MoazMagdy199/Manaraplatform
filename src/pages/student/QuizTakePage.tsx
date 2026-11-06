@@ -22,7 +22,8 @@ function shuffleArray<T>(array: T[]): T[] {
 export default function QuizTakePage() {
   const { id } = useParams()
   const { user } = useAuth()
-  const { quizzes, quizResults, submitQuiz, refetchAll } = useData()
+  // 👈 ضفنا loading هنا عشان نستنى البيانات
+  const { quizzes, quizResults, submitQuiz, refetchAll, loading } = useData()
   const { toast } = useToast()
 
   const quiz = quizzes.find((q) => q.id === id)
@@ -138,6 +139,12 @@ export default function QuizTakePage() {
     }
   }, [reviewMode, quiz, isReviewing])
 
+  // 👈 هنا بنستنى الـ loading يخلص الأول
+  if (loading) {
+    return <div className="flex justify-center items-center h-64"><div className="h-8 w-8 rounded-full border-4 border-[var(--color-brand-500)]/20 border-t-[var(--color-brand-500)] animate-spin" /></div>
+  }
+
+  // لو مفيش اختبار بعد التحميل، نرجعه للاختبارات
   if (!quiz) return <Navigate to="/student/quizzes" replace />
 
   if (isLoadingTimer && !reviewMode) {
