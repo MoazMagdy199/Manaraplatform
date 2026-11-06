@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useData } from '@/context/DataContext'
 import { useAuth } from '@/context/AuthContext'
-import { supabase } from '@/lib/supabase' // 👈 ضفنا دي
 
 export default function StudentQuizzesPage() {
   const { user } = useAuth()
@@ -34,15 +33,6 @@ export default function StudentQuizzesPage() {
         score: r.score,
         maxScore: r.maxScore
       }))
-  }
-
-  // 👈 دالة بتتأكد من مسح المحاولة القديمة قبل الدخول
-  const handleStartQuiz = async (e: React.MouseEvent, quizId: string) => {
-    e.preventDefault()
-    if (user) {
-      await supabase.from('quiz_attempts').delete().eq('quiz_id', quizId).eq('student_id', user.id)
-    }
-    window.location.href = `/student/quizzes/${quizId}`
   }
 
   return (
@@ -85,16 +75,16 @@ export default function StudentQuizzesPage() {
                   </span>
                 </div>
                 
+                {/* 👈 هنا التعديل: استخدمنا Link في الحالتين عشان نمنع الريفريش */}
                 {result ? (
                   <Button asChild className="w-full mt-5" variant="outline">
                     <Link to={`/student/quizzes/${q.id}`}>مراجعة الإجابات</Link>
                   </Button>
                 ) : (
-                  <Button 
-                    onClick={(e) => handleStartQuiz(e, q.id)} 
-                    className="w-full mt-5" 
-                  >
-                    ابدأ الاختبار
+                  <Button asChild className="w-full mt-5">
+                    <Link to={`/student/quizzes/${q.id}`}>
+                      ابدأ الاختبار
+                    </Link>
                   </Button>
                 )}
 
