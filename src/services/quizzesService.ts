@@ -240,24 +240,33 @@ export async function resetStudentQuizAttempt(quizId: string, studentId: string)
 
 // 👈 دالة بتجيب أفضل 5 طلاب في اختبار معين (للوحة الشرف)
 export async function fetchQuizLeaderboard(quizId: string) {
-  const { data, error } = await supabase
+  // 1. بنجيب أفضل 5 نتايج للاختبار ده
+  const { data: results, error } = await supabase
     .from('quiz_results')
-    .select(`
-      score, 
-      max_score,
-      profiles:student_id (name)
-    `)
+    .select('student_id, score, max_score')
     .eq('quiz_id', quizId)
     .order('score', { ascending: false })
     .limit(5)
 
-  if (error) return []
+  if (error || !results) return []
 
-  return data.map((r: any) => ({
-    name: r.profiles?.name || 'طالب',
-    score: r.score,
-    maxScore: r.max_score
-  }))
+  // 2. بنجيب أسماء الطلاب دول
+  const studentIds = results.map(r => r.student_id)
+  
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('id, name')
+    .in('id', studentIds)
+
+  // 3. بنربط الاسم بالدرجة
+  return results.map((r: any) => {
+    const student = profiles?.find(p => p.id === r.student_id)
+    return {
+      name: student?.name || 'طالب', // لو ملقاش الاسم، بيكتب طالب
+      score: r.score,
+      maxScore: r.max_score
+    }
+  })
 }
 
 export type { Quiz }
