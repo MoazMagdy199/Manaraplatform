@@ -13,9 +13,9 @@ import {
   type StudentProfileSummary,
 } from '@/services/studentProfileService'
 
-// 👈 استيراد مكتبات الـ QR والـ PDF
 import { QRCodeCanvas } from 'qrcode.react'
 import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas' // 👈 ضفنا دي
 
 function timeAgo(iso: string): string {
   const diffMs = Date.now() - new Date(iso).getTime()
@@ -58,56 +58,66 @@ export default function StudentProfilePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
-  // 👈 دالة تحميل كارت الـ QR
-  const downloadQRPdf = () => {
+  const downloadQRPdf = async () => {
     if (!student) return
 
-    // بنجيب عنصر الـ canvas اللي شغال في الصفحة حالياً
-    const canvas = document.getElementById('student-qr-canvas') as HTMLCanvasElement
-    if (!canvas) {
-      toast({ title: 'حدث خطأ في قراءة الكود', variant: 'error' })
-      return
+    // 1. نعمل عنصر مخفي عشان نحول النص العربي لصورة
+    const textDiv = document.createElement('div')
+    textDiv.style.position = 'absolute'
+    textDiv.style.left = '-9999px'
+    textDiv.style.top = '0'
+    textDiv.style.background = 'white'
+    textDiv.style.padding = '20px'
+    textDiv.style.width = '400px'
+    textDiv.style.textAlign = 'center'
+    textDiv.style.fontFamily = 'Arial, sans-serif'
+    textDiv.innerHTML = `
+      <h2 style="font-size: 24px; margin: 0; color: #000;">${student.name}</h2>
+      <p style="font-size: 16px; margin: 5px 0; color: #666;">${student.grade || ''}</p>
+      <p style="font-size: 14px; margin: 0; color: #666;">@${student.username}</p>
+    `
+    document.body.appendChild(textDiv)
+
+    try {
+      // 2. نحول النص ده لصورة
+      const canvasText = await html2canvas(textDiv, { scale: 2 })
+      const textImgData = canvasText.toDataURL('image/png')
+
+      // 3. نجيب صورة الـ QR
+      const qrCanvas = document.getElementById('student-qr-canvas') as HTMLCanvasElement
+      const qrImgData = qrCanvas.toDataURL('image/png')
+
+      // 4. نعمل ملف الـ PDF
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [100, 150]
+      })
+
+      pdf.setFillColor(255, 255, 255)
+      pdf.rect(0, 0, 100, 150, 'F')
+      
+      pdf.setDrawColor(19, 78, 74)
+      pdf.setLineWidth(1)
+      pdf.rect(5, 5, 90, 140)
+
+      pdf.setFont("helvetica", "bold")
+      pdf.setFontSize(16)
+      pdf.setTextColor(19, 78, 74)
+      pdf.text("Manara Platform", 50, 20, { align: "center" })
+      
+      // نحط صورة الـ QR
+      pdf.addImage(qrImgData, 'PNG', 20, 35, 60, 60)
+
+      // نحط صورة النص العربي (عرضها 80 مم وطولها متناسب معاها)
+      pdf.addImage(textImgData, 'PNG', 10, 100, 80, 20)
+
+      pdf.save(`QR_${student.username}.pdf`)
+    } catch (error) {
+      toast({ title: 'حدث خطأ في إنشاء الكارت', variant: 'error' })
+    } finally {
+      document.body.removeChild(textDiv)
     }
-
-    const imgData = canvas.toDataURL('image/png')
-
-    // 2. نعمل ملف الـ PDF
-    const pdf = new jsPDF({
-      orientation: 'portrait',
-      unit: 'mm',
-      format: [100, 150] // مقاس الكارت
-    })
-
-    pdf.setFillColor(255, 255, 255)
-    pdf.rect(0, 0, 100, 150, 'F')
-    
-    // إطار الكارت
-    pdf.setDrawColor(19, 78, 74) // لون المنصة
-    pdf.setLineWidth(1)
-    pdf.rect(5, 5, 90, 140)
-
-    // اسم المنصة
-    pdf.setFont("helvetica", "bold")
-    pdf.setFontSize(16)
-    pdf.setTextColor(19, 78, 74)
-    pdf.text("Manara Platform", 50, 20, { align: "center" })
-    
-    // صورة الـ QR
-    pdf.addImage(imgData, 'PNG', 20, 35, 60, 60)
-
-    // بيانات الطالب
-    pdf.setFontSize(14)
-    pdf.setTextColor(0, 0, 0)
-    pdf.text(student.name, 50, 110, { align: "center" })
-    
-    pdf.setFontSize(10)
-    pdf.setTextColor(80, 80, 80)
-    pdf.text(student.grade || '', 50, 117, { align: "center" })
-    
-    pdf.setFont("courier", "normal")
-    pdf.text(`@${student.username}`, 50, 125, { align: "center" })
-
-    pdf.save(`QR_${student.username}.pdf`)
   }
 
   function sendAbsenceWhatsApp() {
@@ -189,7 +199,7 @@ export default function StudentProfilePage() {
               <div className="flex-1 text-center sm:text-right">
                 <h3 className="font-display font-bold text-lg mb-1">كود الحضور (QR)</h3>
                 <p className="text-sm text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mb-4">
-                  هذا الكود خاص بالطالب لتسجيل الحضور في السنتر عبر تطبيق الأسطى.
+                  هذا الكود خاص بالطالب لتسجيل الحضور في السنتر عبر تطبيق الاسيستنت.
                 </p>
                 <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3">
                   <Button onClick={downloadQRPdf} variant="outline" className="bg-white dark:bg-transparent">
@@ -310,4 +320,4 @@ export default function StudentProfilePage() {
       )}
     </div>
   )
-} 
+}
