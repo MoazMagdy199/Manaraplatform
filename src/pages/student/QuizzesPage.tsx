@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Sparkles, Clock, CheckCircle2, HelpCircle, Trophy } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
@@ -5,10 +6,11 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { useData } from '@/context/DataContext'
 import { useAuth } from '@/context/AuthContext'
+import { fetchQuizLeaderboard } from '@/services/quizzesService' // 👈 ضفنا دي
 
 export default function StudentQuizzesPage() {
   const { user } = useAuth()
-  const { quizzes, quizResults, lessons, students } = useData() 
+  const { quizzes, quizResults, lessons } = useData() 
 
   const myResults = quizResults.filter((r) => r.studentId === user?.id)
   const getResult = (quizId: string) => myResults.find((r) => r.quizId === quizId)
@@ -23,17 +25,19 @@ export default function StudentQuizzesPage() {
     return true
   })
 
-  const getLeaderboard = (quizId: string) => {
-    return quizResults
-      .filter(r => r.quizId === quizId)
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 5)
-      .map(r => ({
-        name: students.find(s => s.id === r.studentId)?.name || 'طالب',
-        score: r.score,
-        maxScore: r.maxScore
-      }))
-  }
+  // 👈 State عشان نحفظ لوحة الشرف لكل اختبار
+  const [leaderboards, setLeaderboards] = useState<Record<string, any[]>>({})
+
+  // 👈 بنجيب لوحة الشرف للاختبارات الأسبوعية من السيرفر
+  useEffect(() => {
+    const weeklyQuizzes = myQuizzes.filter(q => q.isWeekly)
+    
+    weeklyQuizzes.forEach(quiz => {
+      fetchQuizLeaderboard(quiz.id).then(data => {
+        setLeaderboards(prev => ({ ...prev, [quiz.id]: data }))
+      })
+    })
+  }, [myQuizzes.length])
 
   return (
     <div className="space-y-6">
@@ -47,7 +51,8 @@ export default function StudentQuizzesPage() {
       <div className="grid md:grid-cols-2 gap-5">
         {myQuizzes.map((q) => {
           const result = getResult(q.id)
-          const leaders = q.isWeekly ? getLeaderboard(q.id) : []
+          // 👈 بنجيب اللوحة من الـ State اللي جبناه من السيرفر
+          const leaders = leaderboards[q.id] || []
 
           return (
             <Card key={q.id} className={q.isWeekly ? 'border-amber-200 shadow-sm' : ''}>
@@ -75,7 +80,6 @@ export default function StudentQuizzesPage() {
                   </span>
                 </div>
                 
-                {/* 👈 هنا التعديل: استخدمنا Link في الحالتين عشان نمنع الريفريش */}
                 {result ? (
                   <Button asChild className="w-full mt-5" variant="outline">
                     <Link to={`/student/quizzes/${q.id}`}>مراجعة الإجابات</Link>
