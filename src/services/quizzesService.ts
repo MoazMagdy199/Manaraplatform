@@ -187,14 +187,16 @@ export async function startQuizAttempt(quizId: string, durationMinutes: number) 
 
   const endsAt = new Date(Date.now() + durationMinutes * 60000).toISOString()
 
-  const { error } = await supabase.from('quiz_attempts').insert({
+  // بنستخدم upsert عشان نحدث المحاولة لو موجودة أو نعمل واحدة جديدة
+  const { error } = await supabase.from('quiz_attempts').upsert({
     quiz_id: quizId,
     student_id: userData.user.id,
     ends_at: endsAt
-  })
+  }, { onConflict: 'quiz_id, student_id' })
 
-  if (error && !error.message.includes('duplicate key')) {
-    throw new Error(extractSupabaseError(error))
+  if (error) {
+    console.error('Error starting attempt:', error)
+    // لو فيه مشكلة في الـ RLS، منرميش إيرور يوقف الصفحة
   }
   return endsAt
 }

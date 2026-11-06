@@ -27,9 +27,7 @@ export default function QuizTakePage() {
   const quiz = quizzes.find((q) => q.id === id)
   const existingResult = quizResults.find((r) => r.quizId === id && r.studentId === user?.id)
 
-  // 👈 بنبدأ الإجابات فاضية دايماً عشان نمنع الإجابات القديمة تظهر
   const [answers, setAnswers] = useState<Record<string, 'A' | 'B' | 'C' | 'D'>>({})
-  
   const [submitted, setSubmitted] = useState(false)
   const [localResult, setLocalResult] = useState<{ score: number; maxScore: number } | null>(null)
   
@@ -73,14 +71,18 @@ export default function QuizTakePage() {
           
           if (remainingSeconds === 0) {
             setTimeLeft(0)
-            toast({ title: 'لقد انتهى وقت هذا الاختبار بالفعل.', variant: 'error' })
             return;
           }
           
           setTimeLeft(remainingSeconds)
+        } else {
+          // Fallback لو فيه مشكلة في السيرفر
+          setTimeLeft(quiz.duration * 60)
         }
       } catch (err) {
-        console.error(err)
+        console.error("Error fetching attempt:", err)
+        // لو حصل إيرور، نعطيه الوقت الأصلي عشان ميقفلش في وشه
+        setTimeLeft(quiz.duration * 60)
       } finally {
         setIsLoadingTimer(false)
       }
