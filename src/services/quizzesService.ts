@@ -177,7 +177,7 @@ export async function fetchAllQuizResults(): Promise<QuizResult[]> {
 }
 
 // ==========================================
-// 👈 دوال تتبع وقت الامتحان (الجديدة)
+// 👈 دوال تتبع وقت الامتحان
 // ==========================================
 
 // تسجيل بداية المحاولة
@@ -234,6 +234,28 @@ export async function resetStudentQuizAttempt(quizId: string, studentId: string)
     .eq('student_id', studentId)
 
   if (attemptErr) throw new Error(extractSupabaseError(attemptErr))
+}
+
+// 👈 دالة بتجيب أفضل 5 طلاب في اختبار معين (للوحة الشرف)
+export async function fetchQuizLeaderboard(quizId: string) {
+  const { data, error } = await supabase
+    .from('quiz_results')
+    .select(`
+      score, 
+      max_score,
+      profiles:student_id (name)
+    `)
+    .eq('quiz_id', quizId)
+    .order('score', { ascending: false })
+    .limit(5)
+
+  if (error) return []
+
+  return data.map((r: any) => ({
+    name: r.profiles?.name || 'طالب',
+    score: r.score,
+    maxScore: r.max_score
+  }))
 }
 
 export type { Quiz }

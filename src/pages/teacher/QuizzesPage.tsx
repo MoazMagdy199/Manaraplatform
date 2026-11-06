@@ -150,11 +150,11 @@ export default function TeacherQuizzesPage() {
   // 👈 دالة إعادة الامتحان
   async function handleResetQuiz(studentId: string, studentName: string) {
     if (!viewResults) return;
-    if (!window.confirm(`هل أنت متأكد من إعادة الاختبار للطالب ${studentName}؟ سيتم مسح نتيجته الحالية.`)) return;
+    if (!window.confirm(`هل أنت متأكد من إعادة الاختبار للطالب ${studentName}؟ سيتم مسح نتيجته الحالية وسيبدأ من جديد.`)) return;
     
     try {
       await resetStudentQuizAttempt(viewResults.id, studentId);
-      toast({ title: 'تم إعادة الاختبار للطالب بنجاح', variant: 'success' });
+      toast({ title: `تم إعادة الاختبار للطالب ${studentName} بنجاح`, variant: 'success' });
       await refetchAll();
     } catch (err) {
       toast({ title: 'حدث خطأ أثناء الإعادة', variant: 'error' });
