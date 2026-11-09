@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
-import { Search, Plus, Pencil, Trash2, KeyRound, GraduationCap, Layers, FileText } from 'lucide-react'
+import { Search, Plus, Pencil, Trash2, GraduationCap, Layers, FileText } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,15 +19,13 @@ import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { initials } from '@/lib/utils'
 import { fetchGroups, type Group } from '@/services/groupsService'
-import { GRADES } from '@/lib/constants' // 👈 ضفنا GRADES من الكونستانت
+import { GRADES } from '@/lib/constants'
 import type { User } from '@/types'
 
 const emptyForm = {
   name: '',
   username: '',
-  password: '',
   phone: '',
-  email: '',
   grade: GRADES[0] as string, 
   groupId: null as string | null,
   parentName: '',
@@ -35,12 +33,11 @@ const emptyForm = {
 }
 
 export default function StudentsPage() {
-  const { students, addStudent, updateStudent, removeStudent, resetPassword } = useData()
+  const { students, addStudent, updateStudent, removeStudent } = useData()
   const { user } = useAuth()
   const { toast } = useToast()
 
   const [query, setQuery] = useState('')
-  // 👈 حالات الفلترة الجديدة
   const [gradeFilter, setGradeFilter] = useState<string>('')
   const [groupFilter, setGroupFilter] = useState<string>('')
 
@@ -58,19 +55,15 @@ export default function StudentsPage() {
       .catch(() => setGroups([]))
   }, [])
 
-  // 👈 تحديث دالة الفلترة عشان تشمل الصف والمجموعة
   const filtered = useMemo(() => {
     return students.filter((s) => {
-      // فلتر البحث بالاسم
       const matchesSearch = 
         s.name.includes(query) || 
         s.username.includes(query) || 
-        s.email.toLowerCase().includes(query.toLowerCase())
+        (s.phone && s.phone.includes(query))
 
-      // فلتر الصف
       const matchesGrade = gradeFilter ? s.grade === gradeFilter : true
 
-      // فلتر المجموعة
       let matchesGroup = true
       if (groupFilter === '__none__') {
         matchesGroup = s.groupId === null
@@ -93,9 +86,7 @@ export default function StudentsPage() {
     setForm({
       name: s.name,
       username: s.username,
-      password: '',
       phone: s.phone,
-      email: s.email,
       grade: s.grade || GRADES[0],
       groupId: s.groupId || null,
       parentName: s.parentName || '',
@@ -105,8 +96,9 @@ export default function StudentsPage() {
   }
 
   async function handleSave() {
-    if (!form.name || !form.username || !form.email) {
-      toast({ title: 'يرجى تعبئة جميع الحقول المطلوبة', variant: 'error' })
+    // 👈 شيلنا الإيميل والباسورد من الشروط
+    if (!form.name || !form.username || !form.phone) {
+      toast({ title: 'يرجى تعبئة الاسم، اسم المستخدم، ورقم الهاتف', variant: 'error' })
       return
     }
     try {
@@ -114,30 +106,23 @@ export default function StudentsPage() {
         await updateStudent(editing.id, {
           name: form.name,
           username: form.username,
-          email: form.email,
           phone: form.phone,
           grade: form.grade,
           groupId: form.groupId,
           parentName: form.parentName || null,
           parentPhone: form.parentPhone || null,
-          newPassword: form.password || undefined,
         })
         toast({ title: 'تم تحديث بيانات الطالب بنجاح', variant: 'success' })
       } else {
-        if (!form.password) {
-          toast({ title: 'يرجى إدخال كلمة مرور للطالب الجديد', variant: 'error' })
-          return
-        }
+        // 👈 هنا بنبعت البيانات من غير إيميل وباسورد (السيرفر هيتصرف)
         await addStudent({
           name: form.name,
           username: form.username,
-          email: form.email,
           phone: form.phone,
           grade: form.grade,
           groupId: form.groupId,
           parentName: form.parentName || null,
           parentPhone: form.parentPhone || null,
-          password: form.password,
         })
         toast({ title: 'تمت إضافة الطالب بنجاح', variant: 'success' })
       }
@@ -153,15 +138,6 @@ export default function StudentsPage() {
       await removeStudent(deleteTarget.id)
       toast({ title: `تم حذف الطالب ${deleteTarget.name}`, variant: 'success' })
       setDeleteTarget(null)
-    } catch {
-      // error toast already shown by DataContext
-    }
-  }
-
-  async function handleReset(s: User) {
-    try {
-      const pwd = await resetPassword(s.id)
-      toast({ title: `تم إعادة تعيين كلمة مرور ${s.name}`, description: `كلمة المرور الجديدة: ${pwd}`, variant: 'info' })
     } catch {
       // error toast already shown by DataContext
     }
@@ -186,7 +162,6 @@ export default function StudentsPage() {
         </Button>
       </div>
 
-      {/* 👈 شريط البحث والفلاتر */}
       <Card>
         <CardContent className="p-5">
           <div className="grid sm:grid-cols-3 gap-4">
@@ -195,7 +170,7 @@ export default function StudentsPage() {
               <div className="relative">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-ink-soft)]" />
                 <Input 
-                  placeholder="بالاسم، اسم المستخدم أو البريد..." 
+                  placeholder="بالاسم، اسم المستخدم أو الهاتف..." 
                   value={query} 
                   onChange={(e) => setQuery(e.target.value)} 
                   className="pr-10" 
@@ -242,7 +217,6 @@ export default function StudentsPage() {
                   <th className="text-right font-semibold p-4">الطالب</th>
                   <th className="text-right font-semibold p-4 hidden md:table-cell">الصف</th>
                   <th className="text-right font-semibold p-4 hidden xl:table-cell">المجموعة</th>
-                  <th className="text-right font-semibold p-4 hidden lg:table-cell">البريد الإلكتروني</th>
                   <th className="text-right font-semibold p-4 hidden sm:table-cell">الهاتف</th>
                   <th className="text-right font-semibold p-4">إجراءات</th>
                 </tr>
@@ -277,7 +251,6 @@ export default function StudentsPage() {
                         <span className="text-xs opacity-50">—</span>
                       )}
                     </td>
-                    <td className="p-4 hidden lg:table-cell text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">{s.email}</td>
                     <td className="p-4 hidden sm:table-cell text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]" dir="ltr">
                       {s.phone}
                     </td>
@@ -287,10 +260,6 @@ export default function StudentsPage() {
                           <Link to={`${basePath}/students/${s.id}/report`} target="_blank" rel="noopener noreferrer">
                             <FileText className="h-4 w-4 text-emerald-600" />
                           </Link>
-                        </Button>
-
-                        <Button size="icon" variant="ghost" onClick={() => handleReset(s)} title="إعادة تعيين كلمة المرور">
-                          <KeyRound className="h-4 w-4" />
                         </Button>
                         <Button size="icon" variant="ghost" onClick={() => openEdit(s)} title="تعديل">
                           <Pencil className="h-4 w-4" />
@@ -304,7 +273,7 @@ export default function StudentsPage() {
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={6} className="p-10 text-center text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
+                    <td colSpan={5} className="p-10 text-center text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
                       لا توجد نتائج مطابقة للبحث
                     </td>
                   </tr>
@@ -320,7 +289,7 @@ export default function StudentsPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editing ? 'تعديل بيانات الطالب' : 'إضافة طالب جديد'}</DialogTitle>
-            <DialogDescription>يرجى تعبئة بيانات الطالب بشكل كامل</DialogDescription>
+            <DialogDescription>أدخل بيانات الطالب الأساسية</DialogDescription>
           </DialogHeader>
           <div className="grid sm:grid-cols-2 gap-4">
             <div className="sm:col-span-2">
@@ -328,20 +297,12 @@ export default function StudentsPage() {
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
             <div>
-              <Label>اسم المستخدم</Label>
+              <Label>اسم المستخدم (للكارت)</Label>
               <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
-            </div>
-            <div>
-              <Label>{editing ? 'كلمة مرور جديدة (اختياري)' : 'كلمة المرور'}</Label>
-              <Input type="password" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
             </div>
             <div>
               <Label>رقم الهاتف</Label>
               <Input dir="ltr" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-            </div>
-            <div>
-              <Label>البريد الإلكتروني</Label>
-              <Input type="email" dir="ltr" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
             </div>
             <div className="sm:col-span-2">
               <Label>الصف الدراسي</Label>
@@ -358,13 +319,13 @@ export default function StudentsPage() {
               </select>
             </div>
             <div className="sm:col-span-2">
-              <Label>المجموعة (اختياري — لو فاضي، الطالب يتبع الصف الدراسي العادي)</Label>
+              <Label>المجموعة (اختياري)</Label>
               <select
                 value={form.groupId || ''}
                 onChange={(e) => setForm({ ...form, groupId: e.target.value || null })}
                 className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
               >
-                <option value="">بدون مجموعة (يتبع الصف)</option>
+                <option value="">بدون مجموعة</option>
                 {groups.map((g) => (
                   <option key={g.id} value={g.id}>{g.name}</option>
                 ))}

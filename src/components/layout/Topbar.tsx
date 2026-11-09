@@ -12,7 +12,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { initials } from '@/lib/utils'
-import { NotificationBell } from '@/components/shared/NotificationBell' // 👈 ضفنا دي
 
 export function Topbar({ onMenuClick, title }: { onMenuClick: () => void; title: string }) {
   const { user, logout } = useAuth()
@@ -21,10 +20,8 @@ export function Topbar({ onMenuClick, title }: { onMenuClick: () => void; title:
 
   if (!user) return null
 
-  const base = 
-    user.role === 'Teacher' ? '/teacher' : 
-    user.role === 'Assistant' ? '/assistant' : 
-    '/student'
+  // 👈 شيلنا مسار الطالب والمساعد عشان مبقالهمش لازمة
+  const base = '/teacher'
 
   return (
     <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-3 border-b border-black/5 bg-[var(--color-paper-raised)]/85 backdrop-blur px-4 sm:px-6 dark:bg-[var(--color-dark-surface)]/85 dark:border-[var(--color-dark-border)]">
@@ -40,9 +37,6 @@ export function Topbar({ onMenuClick, title }: { onMenuClick: () => void; title:
       </div>
 
       <div className="flex items-center gap-2">
-        {/* 👈 حطينا الجرس هنا */}
-        <NotificationBell />
-
         <Button variant="ghost" size="icon" onClick={toggle} aria-label="تبديل المظهر">
           {theme === 'dark' ? <Sun className="h-[18px] w-[18px]" /> : <Moon className="h-[18px] w-[18px]" />}
         </Button>
