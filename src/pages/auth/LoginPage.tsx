@@ -1,11 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, LogIn, ArrowRight } from 'lucide-react'
+import { Eye, EyeOff, LogIn, ArrowRight, UserPlus } from 'lucide-react'
 import { useAuth } from '@/context/AuthContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { useToast } from '@/context/ToastContext'
+import { supabase } from '@/lib/supabase'
 
 function getRolePath(role: string | undefined): string {
   if (role === 'Teacher') return '/teacher'
@@ -25,6 +26,12 @@ export default function LoginPage() {
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
+  // 👈 حالة صفحة إنشاء الحساب
+  const [isSignUp, setIsSignUp] = useState(false)
+  const [signUpName, setSignUpName] = useState('')
+  const [signUpEmail, setSignUpEmail] = useState('')
+  const [signUpPassword, setSignUpPassword] = useState('')
+
   if (user) {
     return <Navigate to={getRolePath(user.role)} replace />
   }
@@ -40,27 +47,47 @@ export default function LoginPage() {
       return
     }
 
-    // 🌟 إظهار رسالة الصلاة على النبي
     toast({
       title: 'اللهم صلِّ وسلم وبارك على نبينا محمد ﷺ',
       description: 'أهلاً بك في منارة.. رحلة التفوق تبدأ الآن',
       variant: 'success', 
     })
 
-    // ⏳ الانتظار ثانيتين قبل الانتقال للصفحة التالية
     setTimeout(() => {
       navigate(getRolePath(res.user?.role))
     }, 2000) 
   }
 
-  function fillDemo(role: 'teacher' | 'student') {
-    if (role === 'teacher') {
-      setUsername('admin')
-      setPassword('Admin123@')
-    } else {
-      setUsername('أحمد1')
-      setPassword('Pass1234')
+  // 👈 دالة إنشاء الحساب الجديد
+  async function handleSignUp(e: FormEvent) {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    
+    // بنعمل الحساب في Supabase مباشرة
+    const { error: signUpError } = await supabase.auth.signUp({
+      email: signUpEmail,
+      password: signUpPassword,
+      options: {
+        data: {
+          name: signUpName,
+          username: signUpEmail.split('@')[0], // بنعمل يوزر نيم من الإيميل
+          role: 'Teacher', // بنخليه مدرس أوتوماتيك
+        }
+      }
+    })
+
+    setLoading(false)
+
+    if (signUpError) {
+      setError(signUpError.message)
+      return
     }
+
+    toast({ title: 'تم إنشاء الحساب بنجاح! يمكنك الآن تسجيل الدخول.', variant: 'success' })
+    setIsSignUp(false) // نرجعه لصفحة الدخول
+    setUsername(signUpEmail.split('@')[0]) // بنملا اسم المستخدم لوحده
+    setPassword(signUpPassword)
   }
 
   return (
@@ -104,75 +131,113 @@ export default function LoginPage() {
             <span className="font-display text-xl font-extrabold">منارة</span>
           </Link>
 
-          <h1 className="font-display text-2xl font-extrabold">تسجيل الدخول</h1>
+          <h1 className="font-display text-2xl font-extrabold">
+            {isSignUp ? 'إنشاء حساب جديد' : 'تسجيل الدخول'}
+          </h1>
           <p className="mt-1.5 text-sm text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
-            أدخل بياناتك للوصول إلى حسابك
+            {isSignUp ? 'أدخل بياناتك لإنشاء حساب جديد' : 'أدخل بياناتك للوصول إلى حسابك'}
           </p>
 
-          <form onSubmit={handleSubmit} className="mt-8 space-y-4">
-            <div>
-              <Label htmlFor="username">اسم المستخدم</Label>
-              <Input
-                id="username"
-                autoFocus
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="اسم المستخدم"
-                required
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="password">كلمة المرور</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••"
-                  required
-                  className="pl-11"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((s) => !s)}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"
-                  tabIndex={-1}
-                >
-                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </button>
+          {/* 👈 فورم إنشاء الحساب */}
+          {isSignUp ? (
+            <form onSubmit={handleSignUp} className="mt-8 space-y-4">
+              <div>
+                <Label>الاسم الكامل</Label>
+                <Input value={signUpName} onChange={(e) => setSignUpName(e.target.value)} required />
               </div>
-            </div>
+              <div>
+                <Label>البريد الإلكتروني</Label>
+                <Input type="email" dir="ltr" value={signUpEmail} onChange={(e) => setSignUpEmail(e.target.value)} required />
+              </div>
+              <div>
+                <Label>كلمة المرور</Label>
+                <Input type="password" dir="ltr" value={signUpPassword} onChange={(e) => setSignUpPassword(e.target.value)} required minLength={6} />
+              </div>
 
-            {error && (
-              <p className="text-sm font-medium text-[var(--color-rose-500)] bg-[var(--color-rose-100)] rounded-lg px-3 py-2">
-                {error}
-              </p>
-            )}
-
-            <div className="flex items-center justify-between text-sm">
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={remember}
-                  onChange={(e) => setRemember(e.target.checked)}
-                  className="h-4 w-4 rounded accent-[var(--color-brand-500)]"
-                />
-                تذكرني
-              </label>
-            </div>
-
-            <Button type="submit" className="w-full" size="lg" disabled={loading}>
-              {loading ? (
-                <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
-              ) : (
-                <>
-                  <LogIn className="h-4 w-4" /> تسجيل الدخول
-                </>
+              {error && (
+                <p className="text-sm font-medium text-[var(--color-rose-500)] bg-[var(--color-rose-100)] rounded-lg px-3 py-2">{error}</p>
               )}
-            </Button>
-          </form>
+
+              <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                {loading ? <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" /> : 'إنشاء الحساب'}
+              </Button>
+              
+              <Button type="button" variant="ghost" className="w-full" onClick={() => setIsSignUp(false)}>
+                لديك حساب بالفعل؟ تسجيل الدخول
+              </Button>
+            </form>
+          ) : (
+            /* 👈 فورم تسجيل الدخول */
+            <form onSubmit={handleSubmit} className="mt-8 space-y-4">
+              <div>
+                <Label htmlFor="username">اسم المستخدم</Label>
+                <Input
+                  id="username"
+                  autoFocus
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="اسم المستخدم"
+                  required
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="password">كلمة المرور</Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="••••••••"
+                    required
+                    className="pl-11"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((s) => !s)}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--color-ink-soft)] hover:text-[var(--color-ink)]"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+              </div>
+
+              {error && (
+                <p className="text-sm font-medium text-[var(--color-rose-500)] bg-[var(--color-rose-100)] rounded-lg px-3 py-2">
+                  {error}
+                </p>
+              )}
+
+              <div className="flex items-center justify-between text-sm">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    onChange={(e) => setRemember(e.target.checked)}
+                    className="h-4 w-4 rounded accent-[var(--color-brand-500)]"
+                  />
+                  تذكرني
+                </label>
+              </div>
+
+              <Button type="submit" className="w-full" size="lg" disabled={loading}>
+                {loading ? (
+                  <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                ) : (
+                  <>
+                    <LogIn className="h-4 w-4" /> تسجيل الدخول
+                  </>
+                )}
+              </Button>
+
+              {/* 👈 زرار فتح صفحة إنشاء الحساب */}
+              <Button type="button" variant="outline" className="w-full" onClick={() => setIsSignUp(true)}>
+                <UserPlus className="h-4 w-4 ml-2" /> إنشاء حساب جديد
+              </Button>
+            </form>
+          )}
 
           <Link
             to="/"
