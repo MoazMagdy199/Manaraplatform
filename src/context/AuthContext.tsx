@@ -88,17 +88,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (mounted) setLoading(false)
     })
 
-    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session?.user) {
-        const userId = session.user.id
-        const profile = await fetchProfile(userId)
-        if (mounted) setUser(profile)
-        // نحدّث آخر نشاط في الخلفية
-        updateLastSeen(userId)
-      } else {
-        if (mounted) setUser(null)
-      }
-    })
+    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
+  if (session?.user) {
+    const userId = session.user.id
+    setTimeout(async () => {
+      const profile = await fetchProfile(userId)
+      if (mounted) setUser(profile)
+      updateLastSeen(userId)
+    }, 0)
+  } else {
+    setUser(null)
+  }
+})
 
     return () => {
       mounted = false
