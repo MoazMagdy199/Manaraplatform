@@ -33,7 +33,7 @@ export async function fetchStudents(search?: string): Promise<User[]> {
 export interface CreateStudentInput {
   name: string
   username: string
-  phone: string
+  phone: string | null
   grade: string
   groupId?: string | null
   parentPhone?: string | null
@@ -51,7 +51,7 @@ export async function createStudent(input: CreateStudentInput): Promise<User> {
 export interface UpdateStudentInput {
   name: string
   username: string
-  phone: string
+  phone: string | null
   grade: string
   groupId?: string | null
   parentPhone?: string | null

@@ -66,7 +66,7 @@ export default function StudentsPage() {
     setEditing(s)
     setForm({
       name: s.name,
-      phone: s.phone,
+      phone: s.phone || '',
       grade: s.grade || GRADES[0],
       parentName: s.parentName || '',
       parentPhone: s.parentPhone || '',
@@ -75,8 +75,9 @@ export default function StudentsPage() {
   }
 
   async function handleSave() {
-    if (!form.name || !form.phone) {
-      toast({ title: 'يرجى تعبئة الاسم ورقم الهاتف', variant: 'error' })
+    // 👈 شيلنا شرط !form.phone عشان يبقى اختياري
+    if (!form.name) {
+      toast({ title: 'يرجى تعبئة الاسم على الأقل', variant: 'error' })
       return
     }
     
@@ -88,7 +89,7 @@ export default function StudentsPage() {
         await updateStudent(editing.id, {
           name: form.name,
           username: generatedUsername,
-          phone: form.phone,
+          phone: form.phone || null,
           grade: form.grade,
           parentName: form.parentName || null,
           parentPhone: form.parentPhone || null,
@@ -98,7 +99,7 @@ export default function StudentsPage() {
         await addStudent({
           name: form.name,
           username: generatedUsername,
-          phone: form.phone,
+          phone: form.phone || null,
           grade: form.grade,
           parentName: form.parentName || null,
           parentPhone: form.parentPhone || null,
@@ -202,7 +203,7 @@ export default function StudentsPage() {
                       </span>
                     </td>
                     <td className="p-4 hidden sm:table-cell text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]" dir="ltr">
-                      {s.phone}
+                      {s.phone || '—'}
                     </td>
                     <td className="p-4">
                       <div className="flex items-center gap-1">
@@ -247,8 +248,9 @@ export default function StudentsPage() {
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
             <div>
-              <Label>رقم الهاتف</Label>
-              <Input dir="ltr" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
+              {/* 👈 غيرنا الاسم ليكون اختياري */}
+              <Label>رقم الهاتف (اختياري)</Label>
+              <Input dir="ltr" placeholder="01xxxxxxxxx" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </div>
             <div>
               <Label>الصف الدراسي</Label>
