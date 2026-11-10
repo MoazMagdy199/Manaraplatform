@@ -4,6 +4,7 @@ import { ThemeProvider } from '@/context/ThemeContext'
 import { DataProvider } from '@/context/DataContext'
 import { ToastProvider } from '@/context/ToastContext'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
+import { useAuth } from '@/context/AuthContext' // 👈 ضفنا دي
 
 import LandingPage from '@/pages/public/LandingPage'
 import LoginPage from '@/pages/auth/LoginPage'
@@ -19,6 +20,16 @@ import TeacherGradesPage from '@/pages/teacher/GradesPage'
 import ProfilePage from '@/pages/shared/ProfilePage'
 import SettingsPage from '@/pages/shared/SettingsPage'
 import AttendancePage from '@/pages/teacher/AttendancePage'
+
+// 👈 كومبوننت صغير عشان يوجه كل واحد حسب صلاحيته
+function TeacherIndexRedirect() {
+  const { user } = useAuth()
+  
+  if (user?.role === 'Assistant') {
+    return <Navigate to="/teacher/attendance" replace />
+  }
+  return <Navigate to="/teacher/students" replace />
+}
 
 function App() {
   return (
@@ -39,10 +50,9 @@ function App() {
                     </ProtectedRoute>
                   }
                 >
-                  {/* 👈 أول ما يدخل، يروح على الطلاب على طول */}
-                  <Route index element={<Navigate to="/teacher/students" replace />} />
+                  {/* 👈 بنستخدم الكومبوننت الجديد عشان يوجه المساعد للحضور */}
+                  <Route index element={<TeacherIndexRedirect />} />
                   
-                  {/* 👈 الحاجات اللي هو محتاجها بس */}
                   <Route path="students" element={<StudentsPage />} />
                   <Route path="students/:id" element={<StudentProfilePage />} />
                   <Route path="students/:id/report" element={<StudentReportPage />} />

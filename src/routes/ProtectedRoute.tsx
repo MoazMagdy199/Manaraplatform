@@ -5,7 +5,7 @@ import type { Role } from '@/types'
 
 function getRolePath(role: Role): string {
   if (role === 'Teacher') return '/teacher'
-  if (role === 'Assistant') return '/assistant'
+  if (role === 'Assistant') return '/teacher/attendance' // 👈 المساعد يروح للحضور
   return '/student'
 }
 
@@ -30,7 +30,11 @@ export function ProtectedRoute({
 
   if (role) {
     const allowedRoles = Array.isArray(role) ? role : [role]
-    if (!allowedRoles.includes(user.role)) {
+    
+    // 👈 السماح للمساعد بالدخول حتى لو المسار مكتوب عليه Teacher
+    const isAssistantAllowed = user.role === 'Assistant' && allowedRoles.includes('Teacher')
+
+    if (!allowedRoles.includes(user.role) && !isAssistantAllowed) {
       return <Navigate to={getRolePath(user.role)} replace />
     }
   }
