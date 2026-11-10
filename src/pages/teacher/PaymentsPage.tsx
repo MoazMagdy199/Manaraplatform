@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Wallet, Check, X, Users, TrendingUp, Layers, Banknote, AlertCircle } from 'lucide-react'
+import { Wallet, Check, X, Users, TrendingUp, Banknote, AlertCircle } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,10 +13,8 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { useToast } from '@/context/ToastContext'
-import { useAuth } from '@/context/AuthContext'
 import { GRADES } from '@/lib/constants'
 import { cn, formatDate } from '@/lib/utils'
-import { fetchGroups, type Group } from '@/services/groupsService'
 import {
   fetchPaymentsForMonth,
   setPaymentStatus,
@@ -44,11 +42,8 @@ function monthLabel(value: string) {
 
 export default function PaymentsPage() {
   const { toast } = useToast()
-  const { user } = useAuth()
 
   const [grade, setGrade] = useState<string>(GRADES[0])
-  const [groupId, setGroupId] = useState<string | null>(null)
-  const [groups, setGroups] = useState<Group[]>([])
   const [month, setMonth] = useState(currentMonthValue())
   
   const [rows, setRows] = useState<PaymentRow[]>([])
@@ -63,20 +58,10 @@ export default function PaymentsPage() {
   const [notesVal, setNotesVal] = useState('')
   const [savingNote, setSavingNote] = useState(false)
 
-  const isAssistant = user?.role === 'Assistant'
-
-  // تحميل المجموعات
-  useEffect(() => {
-    fetchGroups()
-      .then((all) => setGroups(all.filter((g) => !g.grade || g.grade === grade)))
-      .catch(() => setGroups([]))
-    setGroupId(null) // تصفير المجموعة عند تغيير الصف
-  }, [grade])
-
   async function loadPayments() {
     setLoading(true)
     try {
-      const data = await fetchPaymentsForMonth(grade, month, groupId)
+      const data = await fetchPaymentsForMonth(grade, month)
       setRows(data)
     } catch (err) {
       toast({ title: err instanceof Error ? err.message : 'تعذّر تحميل بيانات الاشتراك', variant: 'error' })
@@ -95,10 +80,9 @@ export default function PaymentsPage() {
   }
 
   async function loadSummary() {
-    if (isAssistant) return // الـ Assistant مش بيشوف الإحصائيات
     setLoadingSummary(true)
     try {
-      const data = await fetchPaymentsSummary(month, groupId)
+      const data = await fetchPaymentsSummary(month)
       setSummary(data)
     } catch {
       // صامت
@@ -110,37 +94,16 @@ export default function PaymentsPage() {
   useEffect(() => {
     loadPayments()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [grade, month, groupId])
+  }, [grade, month])
 
   useEffect(() => {
     loadOverview()
     loadSummary()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [month, groupId])
+  }, [month])
 
   async function togglePaid(row: PaymentRow) {
     const next = !row.paid
-
-    if (isAssistant) {
-      try {
-        await requestPaymentChange({
-          studentId: row.studentId,
-          studentName: row.name,
-          month,
-          paid: next,
-          amount: row.amount,
-          notes: row.notes,
-        })
-        toast({
-          title: 'تم إرسال الطلب للمدرس للموافقة',
-          description: 'مش هيتم التنفيذ إلا بعد الموافقة',
-          variant: 'info',
-        })
-      } catch (err) {
-        toast({ title: err instanceof Error ? err.message : 'تعذّر إرسال الطلب', variant: 'error' })
-      }
-      return
-    }
 
     setRows((prev) => prev.map((r) => (r.studentId === row.studentId ? { ...r, paid: next } : r)))
     try {
@@ -166,24 +129,6 @@ export default function PaymentsPage() {
       const amount = amountVal.trim() ? Number(amountVal) : null
       const notes = notesVal.trim() || null
 
-      if (isAssistant) {
-        await requestPaymentChange({
-          studentId: noteTarget.studentId,
-          studentName: noteTarget.name,
-          month,
-          paid: noteTarget.paid,
-          amount,
-          notes,
-        })
-        toast({
-          title: 'تم إرسال الطلب للمدرس للموافقة',
-          description: 'مش هيتم التنفيذ إلا بعد الموافقة',
-          variant: 'info',
-        })
-        setNoteTarget(null)
-        return
-      }
-
       await setPaymentStatus(noteTarget.studentId, month, noteTarget.paid, amount, notes)
       setRows((prev) =>
         prev.map((r) =>
@@ -207,52 +152,48 @@ export default function PaymentsPage() {
       <div>
         <h2 className="font-display text-2xl font-extrabold">متابعة الاشتراك الشهري</h2>
         <p className="text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1 text-sm">
-          {isAssistant
-            ? 'العمليات المالية بتحتاج موافقة المدرس'
-            : 'تابع مين دفع ومين لسه لكل شهر'}
+          تابع مين دفع ومين لسه لكل شهر
         </p>
       </div>
 
-      {/* كروت الإحصائيات (للمدرس فقط) */}
-      {!isAssistant && (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card className="border-[var(--color-brand-200)] dark:border-[var(--color-brand-900)]">
-            <CardContent className="p-5">
-              <div className="h-9 w-9 rounded-xl bg-[var(--color-brand-50)] dark:bg-[var(--color-brand-900)]/40 flex items-center justify-center mb-3">
-                <Banknote className="h-4.5 w-4.5 text-[var(--color-brand-600)]" />
-              </div>
-              <p className="font-display text-2xl font-extrabold">
-                {loadingSummary ? '...' : (summary?.totalExpected || 0).toLocaleString()} <span className="text-sm font-normal">ج.م</span>
-              </p>
-              <p className="text-sm text-[var(--color-ink-soft)] mt-1">إجمالي الاشتراكات المتوقعة</p>
-            </CardContent>
-          </Card>
+      {/* كروت الإحصائيات */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="border-[var(--color-brand-200)] dark:border-[var(--color-brand-900)]">
+          <CardContent className="p-5">
+            <div className="h-9 w-9 rounded-xl bg-[var(--color-brand-50)] dark:bg-[var(--color-brand-900)]/40 flex items-center justify-center mb-3">
+              <Banknote className="h-4.5 w-4.5 text-[var(--color-brand-600)]" />
+            </div>
+            <p className="font-display text-2xl font-extrabold">
+              {loadingSummary ? '...' : (summary?.totalExpected || 0).toLocaleString()} <span className="text-sm font-normal">ج.م</span>
+            </p>
+            <p className="text-sm text-[var(--color-ink-soft)] mt-1">إجمالي الاشتراكات المتوقعة</p>
+          </CardContent>
+        </Card>
 
-          <Card className="border-emerald-200 dark:border-emerald-900/50">
-            <CardContent className="p-5">
-              <div className="h-9 w-9 rounded-xl bg-emerald-50 flex items-center justify-center mb-3">
-                <TrendingUp className="h-4.5 w-4.5 text-emerald-600" />
-              </div>
-              <p className="font-display text-2xl font-extrabold text-emerald-700 dark:text-emerald-400">
-                {loadingSummary ? '...' : (summary?.totalPaid || 0).toLocaleString()} <span className="text-sm font-normal">ج.م</span>
-              </p>
-              <p className="text-sm text-[var(--color-ink-soft)] mt-1">تم تحصيلها ({summary?.paidCount || 0} طالب)</p>
-            </CardContent>
-          </Card>
+        <Card className="border-emerald-200 dark:border-emerald-900/50">
+          <CardContent className="p-5">
+            <div className="h-9 w-9 rounded-xl bg-emerald-50 flex items-center justify-center mb-3">
+              <TrendingUp className="h-4.5 w-4.5 text-emerald-600" />
+            </div>
+            <p className="font-display text-2xl font-extrabold text-emerald-700 dark:text-emerald-400">
+              {loadingSummary ? '...' : (summary?.totalPaid || 0).toLocaleString()} <span className="text-sm font-normal">ج.م</span>
+            </p>
+            <p className="text-sm text-[var(--color-ink-soft)] mt-1">تم تحصيلها ({summary?.paidCount || 0} طالب)</p>
+          </CardContent>
+        </Card>
 
-          <Card className="border-rose-200 dark:border-rose-900/50">
-            <CardContent className="p-5">
-              <div className="h-9 w-9 rounded-xl bg-rose-50 flex items-center justify-center mb-3">
-                <AlertCircle className="h-4.5 w-4.5 text-rose-600" />
-              </div>
-              <p className="font-display text-2xl font-extrabold text-rose-700 dark:text-rose-400">
-                {loadingSummary ? '...' : (summary?.totalRemaining || 0).toLocaleString()} <span className="text-sm font-normal">ج.م</span>
-              </p>
-              <p className="text-sm text-[var(--color-ink-soft)] mt-1">لسه متحصلة ({summary?.unpaidCount || 0} طالب)</p>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+        <Card className="border-rose-200 dark:border-rose-900/50">
+          <CardContent className="p-5">
+            <div className="h-9 w-9 rounded-xl bg-rose-50 flex items-center justify-center mb-3">
+              <AlertCircle className="h-4.5 w-4.5 text-rose-600" />
+            </div>
+            <p className="font-display text-2xl font-extrabold text-rose-700 dark:text-rose-400">
+              {loadingSummary ? '...' : (summary?.totalRemaining || 0).toLocaleString()} <span className="text-sm font-normal">ج.م</span>
+            </p>
+            <p className="text-sm text-[var(--color-ink-soft)] mt-1">لسه متحصلة ({summary?.unpaidCount || 0} طالب)</p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* كروت ملخص الصفوف */}
       {overview.length > 0 && (
@@ -280,7 +221,7 @@ export default function PaymentsPage() {
       )}
 
       <Card>
-        <CardContent className="p-5 grid sm:grid-cols-3 gap-4">
+        <CardContent className="p-5 grid sm:grid-cols-2 gap-4">
           <div>
             <Label>الصف الدراسي</Label>
             <select
@@ -291,23 +232,6 @@ export default function PaymentsPage() {
               {GRADES.map((g) => (
                 <option key={g} value={g}>
                   {g}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <Label className="flex items-center gap-1.5">
-              <Layers className="h-3.5 w-3.5" /> المجموعة
-            </Label>
-            <select
-              value={groupId || ''}
-              onChange={(e) => setGroupId(e.target.value || null)}
-              className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
-            >
-              <option value="">كل الطلاب (بدون فلتر)</option>
-              {groups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.name}
                 </option>
               ))}
             </select>
@@ -335,7 +259,7 @@ export default function PaymentsPage() {
           ) : rows.length === 0 ? (
             <div className="text-center py-14 text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
               <Wallet className="h-10 w-10 mx-auto opacity-40 mb-3" />
-              لا يوجد طلاب في هذه المجموعة
+              لا يوجد طلاب في هذا الصف
             </div>
           ) : (
             <div className="divide-y divide-black/5 dark:divide-[var(--color-dark-border)]">
@@ -388,7 +312,6 @@ export default function PaymentsPage() {
             <DialogTitle>{noteTarget?.name}</DialogTitle>
             <DialogDescription>
               تفاصيل الاشتراك — شهر {monthLabel(month)}
-              {isAssistant && ' (هيتم إرسال الطلب للمدرس)'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -416,7 +339,7 @@ export default function PaymentsPage() {
               إلغاء
             </Button>
             <Button onClick={saveNote} disabled={savingNote}>
-              {savingNote ? 'جاري الحفظ...' : isAssistant ? 'إرسال الطلب' : 'حفظ'}
+              {savingNote ? 'جاري الحفظ...' : 'حفظ'}
             </Button>
           </DialogFooter>
         </DialogContent>
