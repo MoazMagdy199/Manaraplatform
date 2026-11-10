@@ -231,3 +231,10 @@ export async function fetchPaymentsSummary(
     unpaidCount: Number(res.unpaid_count) || 0,
   }
 }
+export async function setGradeSubscriptionAmount(grade: string, amount: number): Promise<void> {
+  const { error } = await supabase.rpc('set_grade_subscription_amount', {
+    p_grade: grade,
+    p_amount: amount,
+  })
+  if (error) throw new Error(extractSupabaseError(error))
+}

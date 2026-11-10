@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Wallet, Check, X, Users, TrendingUp, Banknote, AlertCircle } from 'lucide-react'
+import { Wallet, Check, X, Users, TrendingUp, Banknote, AlertCircle, Settings } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -19,8 +19,8 @@ import {
   fetchPaymentsForMonth,
   setPaymentStatus,
   fetchPaymentsOverview,
-  requestPaymentChange,
   fetchPaymentsSummary,
+  setGradeSubscriptionAmount, // 👈 ضفنا دي
   type PaymentsSummary,
 } from '@/services/paymentsService'
 import type { PaymentRow, PaymentsOverviewRow } from '@/types'
@@ -57,6 +57,11 @@ export default function PaymentsPage() {
   const [amountVal, setAmountVal] = useState('')
   const [notesVal, setNotesVal] = useState('')
   const [savingNote, setSavingNote] = useState(false)
+
+  // 👈 حالة زرار تحديد سعر الصف
+  const [priceDialogOpen, setPriceDialogOpen] = useState(false)
+  const [gradePrice, setGradePrice] = useState('')
+  const [savingPrice, setSavingPrice] = useState(false)
 
   async function loadPayments() {
     setLoading(true)
@@ -145,15 +150,40 @@ export default function PaymentsPage() {
     }
   }
 
+  // 👈 دالة حفظ سعر الصف
+  async function saveGradePrice() {
+    if (!gradePrice || Number(gradePrice) <= 0) {
+      toast({ title: 'يرجى إدخال سعر صحيح أكبر من صفر', variant: 'error' })
+      return
+    }
+    setSavingPrice(true)
+    try {
+      await setGradeSubscriptionAmount(grade, Number(gradePrice))
+      toast({ title: `تم تحديد سعر ${grade} بـ ${gradePrice} جنيه`, variant: 'success' })
+      setPriceDialogOpen(false)
+      loadSummary()
+      loadPayments()
+    } catch (err) {
+      toast({ title: err instanceof Error ? err.message : 'تعذّر حفظ السعر', variant: 'error' })
+    } finally {
+      setSavingPrice(false)
+    }
+  }
+
   const paidCount = rows.filter((r) => r.paid).length
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="font-display text-2xl font-extrabold">متابعة الاشتراك الشهري</h2>
-        <p className="text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1 text-sm">
-          تابع مين دفع ومين لسه لكل شهر
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="font-display text-2xl font-extrabold">متابعة الاشتراك الشهري</h2>
+          <p className="text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1 text-sm">
+            تابع مين دفع ومين لسه لكل شهر
+          </p>
+        </div>
+        <Button onClick={() => { setGradePrice(''); setPriceDialogOpen(true) }} variant="outline">
+          <Settings className="h-4 w-4 ml-2" /> تحديد سعر الصف
+        </Button>
       </div>
 
       {/* كروت الإحصائيات */}
@@ -305,7 +335,39 @@ export default function PaymentsPage() {
         </CardContent>
       </Card>
 
-      {/* Amount + notes dialog */}
+      {/* Dialog سعر الصف */}
+      <Dialog open={priceDialogOpen} onOpenChange={setPriceDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>تحديد سعر الاشتراك — {grade}</DialogTitle>
+            <DialogDescription>
+              هذا السعر سيتم تطبيقه على كل طلاب الصف. يمكنك تعديله في أي وقت.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div>
+              <Label>سعر الاشتراك (بالجنيه)</Label>
+              <Input
+                type="number"
+                dir="ltr"
+                placeholder="مثال: 300"
+                value={gradePrice}
+                onChange={(e) => setGradePrice(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPriceDialogOpen(false)}>
+              إلغاء
+            </Button>
+            <Button onClick={saveGradePrice} disabled={savingPrice}>
+              {savingPrice ? 'جاري الحفظ...' : 'تطبيق السعر'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog تفاصيل الاشتراك الفردي */}
       <Dialog open={!!noteTarget} onOpenChange={(o) => !o && setNoteTarget(null)}>
         <DialogContent className="max-w-sm">
           <DialogHeader>
