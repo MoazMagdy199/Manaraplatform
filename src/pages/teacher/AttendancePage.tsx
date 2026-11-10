@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from 'react'
-import { CalendarCheck, Check, X, Settings2, Users, UploadCloud, ScanLine } from 'lucide-react'
+import { CalendarCheck, Check, X, Settings2, Users, UploadCloud, ScanLine, Camera } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,6 +23,7 @@ import {
   replaceSchedule,
 } from '@/services/attendanceService'
 import type { AttendanceRow, AttendanceStatus } from '@/types'
+import { Html5Qrcode } from 'html5-qrcode' // 👈 استيراد مكتبة الكاميرا
 
 const WEEKDAYS = [
   { value: 0, label: 'الأحد' },
@@ -53,8 +54,12 @@ export default function AttendancePage() {
   const [loadingSchedule, setLoadingSchedule] = useState(false)
   const [savingSchedule, setSavingSchedule] = useState(false)
 
-  const fileInputRef = useRef<HTMLInputElement>(null) // 👈 عشان نفتح ملف الـ CSV
-  const searchInputRef = useRef<HTMLInputElement>(null) // 👈 عشان السكانر
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const searchInputRef = useRef<HTMLInputElement>(null)
+
+  // 👈 حالات الكاميرا
+  const [cameraOpen, setCameraOpen] = useState(false)
+  const [scannerInstance, setScannerInstance] = useState<Html5Qrcode | null>(null)
 
   async function loadAttendance() {
     setLoading(true)
@@ -81,15 +86,8 @@ export default function AttendancePage() {
     setRows((prev) => prev.map((r) => ({ ...r, status })))
   }
 
-  // 👈 دالة استقبال كود السكانر
-  function handleScan(e: React.FormEvent) {
-    e.preventDefault()
-    if (!searchInputRef.current) return
-    
-    const scannedCode = searchInputRef.current.value.trim()
-    if (!scannedCode) return
-
-    // بندور على الطالب بالـ username (اللي هو الكود اللي في الـ QR)
+  // 👈 التعامل مع الكود اللي بيتقرا
+  function processScannedCode(scannedCode: string) {
     const student = rows.find(r => r.username === scannedCode || r.studentId === scannedCode)
 
     if (student) {
@@ -98,9 +96,55 @@ export default function AttendancePage() {
     } else {
       toast({ title: 'هذا الكود غير مسجل في هذا الصف', variant: 'error' })
     }
+  }
 
-    // بنفضي الخانة عشان يبقى جاهز للطالب اللي بعده
+  function handleScan(e: React.FormEvent) {
+    e.preventDefault()
+    if (!searchInputRef.current) return
+    
+    const scannedCode = searchInputRef.current.value.trim()
+    if (!scannedCode) return
+
+    processScannedCode(scannedCode)
     searchInputRef.current.value = ''
+  }
+
+  // 👈 تشغيل الكاميرا
+  const startCamera = async () => {
+    setCameraOpen(true)
+    setTimeout(async () => {
+      try {
+        const scanner = new Html5Qrcode("reader")
+        setScannerInstance(scanner)
+        
+        await scanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          (decodedText) => {
+            processScannedCode(decodedText)
+          },
+          () => { /* بنتجاهل أخطاء القراءة المتكررة */ }
+        )
+      } catch (err) {
+        console.error(err)
+        toast({ title: 'تعذّر فتح الكاميرا. تأكد من إعطاء الإذن للمتصفح.', variant: 'error' })
+        setCameraOpen(false)
+      }
+    }, 500)
+  }
+
+  // 👈 إغلاق الكاميرا
+  const stopCamera = async () => {
+    if (scannerInstance) {
+      try {
+        await scannerInstance.stop()
+        scannerInstance.clear()
+      } catch (err) {
+        console.error(err)
+      }
+    }
+    setScannerInstance(null)
+    setCameraOpen(false)
   }
 
   async function handleSave() {
@@ -123,7 +167,7 @@ export default function AttendancePage() {
     }
   }
 
-  // 👈 دالة استيراد ملف الـ CSV
+  // 👈 استيراد CSV
   const handleCSVImport = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -238,21 +282,34 @@ export default function AttendancePage() {
         </div>
       </div>
 
-      {/* 👈 مربع السكانر */}
+      {/* 👈 كارت الكاميرا والسكانر */}
       <Card className="border-[var(--color-brand-200)] bg-[var(--color-brand-50)]/30 dark:bg-[var(--color-brand-900)]/10 dark:border-[var(--color-brand-800)]">
-        <CardContent className="p-5 flex items-center gap-4">
-          <div className="h-10 w-10 rounded-xl bg-[var(--color-brand-500)] text-white flex items-center justify-center shrink-0">
-            <ScanLine className="h-5 w-5" />
-          </div>
-          <form onSubmit={handleScan} className="flex-1">
-            <Label className="mb-1 block">مسح كارت الطالب (سكانر)</Label>
-            <Input 
-              ref={searchInputRef}
-              placeholder="قم بتمرير كارت الـ QR أمام الجهاز هنا..."
-              autoFocus
-              className="text-lg"
-            />
-          </form>
+        <CardContent className="p-5">
+          {!cameraOpen ? (
+            <div className="flex flex-col sm:flex-row items-center gap-4">
+              <div className="flex-1">
+                <Label className="mb-1 block">مسح كارت الطالب (سكانر أو كاميرا)</Label>
+                <form onSubmit={handleScan}>
+                  <Input 
+                    ref={searchInputRef}
+                    placeholder="قم بتمرير كارت الـ QR أمام الجهاز هنا..."
+                    autoFocus
+                    className="text-lg"
+                  />
+                </form>
+              </div>
+              <Button onClick={startCamera} className="w-full sm:w-auto mt-4 sm:mt-0" size="lg">
+                <Camera className="h-5 w-5 ml-2" /> فتح الكاميرا
+              </Button>
+            </div>
+          ) : (
+            <div className="space-y-4 text-center">
+              <div id="reader" className="w-full max-w-sm mx-auto overflow-hidden rounded-xl border border-black/10"></div>
+              <Button onClick={stopCamera} variant="destructive">
+                <X className="h-4 w-4 ml-2" /> إغلاق الكاميرا
+              </Button>
+            </div>
+          )}
         </CardContent>
       </Card>
 
