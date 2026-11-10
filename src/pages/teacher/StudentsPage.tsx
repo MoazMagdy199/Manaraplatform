@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from 'react'
-import { Search, Plus, Pencil, Trash2, GraduationCap, Layers, FileText } from 'lucide-react'
+import { Search, Plus, Pencil, Trash2, GraduationCap, FileText } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,16 +18,13 @@ import { useData } from '@/context/DataContext'
 import { useAuth } from '@/context/AuthContext'
 import { useToast } from '@/context/ToastContext'
 import { initials } from '@/lib/utils'
-import { fetchGroups, type Group } from '@/services/groupsService'
 import { GRADES } from '@/lib/constants'
 import type { User } from '@/types'
 
 const emptyForm = {
   name: '',
-  username: '',
   phone: '',
   grade: GRADES[0] as string, 
-  groupId: null as string | null,
   parentName: '',
   parentPhone: '',
 }
@@ -39,41 +36,25 @@ export default function StudentsPage() {
 
   const [query, setQuery] = useState('')
   const [gradeFilter, setGradeFilter] = useState<string>('')
-  const [groupFilter, setGroupFilter] = useState<string>('')
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<User | null>(null)
   const [form, setForm] = useState(emptyForm)
   const [deleteTarget, setDeleteTarget] = useState<User | null>(null)
-  const [groups, setGroups] = useState<Group[]>([])
 
-  const basePath = user?.role === 'Assistant' ? '/assistant' : '/teacher'
-
-  useEffect(() => {
-    fetchGroups()
-      .then(setGroups)
-      .catch(() => setGroups([]))
-  }, [])
+  const basePath = '/teacher'
 
   const filtered = useMemo(() => {
     return students.filter((s) => {
       const matchesSearch = 
         s.name.includes(query) || 
-        s.username.includes(query) || 
         (s.phone && s.phone.includes(query))
 
       const matchesGrade = gradeFilter ? s.grade === gradeFilter : true
 
-      let matchesGroup = true
-      if (groupFilter === '__none__') {
-        matchesGroup = s.groupId === null
-      } else if (groupFilter) {
-        matchesGroup = s.groupId === groupFilter
-      }
-
-      return matchesSearch && matchesGrade && matchesGroup
+      return matchesSearch && matchesGrade
     })
-  }, [students, query, gradeFilter, groupFilter])
+  }, [students, query, gradeFilter])
 
   function openAdd() {
     setEditing(null)
@@ -85,10 +66,8 @@ export default function StudentsPage() {
     setEditing(s)
     setForm({
       name: s.name,
-      username: s.username,
       phone: s.phone,
       grade: s.grade || GRADES[0],
-      groupId: s.groupId || null,
       parentName: s.parentName || '',
       parentPhone: s.parentPhone || '',
     })
@@ -96,31 +75,31 @@ export default function StudentsPage() {
   }
 
   async function handleSave() {
-    // 👈 شيلنا الإيميل والباسورد من الشروط
-    if (!form.name || !form.username || !form.phone) {
-      toast({ title: 'يرجى تعبئة الاسم، اسم المستخدم، ورقم الهاتف', variant: 'error' })
+    if (!form.name || !form.phone) {
+      toast({ title: 'يرجى تعبئة الاسم ورقم الهاتف', variant: 'error' })
       return
     }
+    
+    // بنعمل اسم مستخدم أوتوماتيك من الاسم (بنشيل المسافات ونحط _)
+    const generatedUsername = form.name.trim().replace(/\s+/g, '_').toLowerCase()
+
     try {
       if (editing) {
         await updateStudent(editing.id, {
           name: form.name,
-          username: form.username,
+          username: generatedUsername,
           phone: form.phone,
           grade: form.grade,
-          groupId: form.groupId,
           parentName: form.parentName || null,
           parentPhone: form.parentPhone || null,
         })
         toast({ title: 'تم تحديث بيانات الطالب بنجاح', variant: 'success' })
       } else {
-        // 👈 هنا بنبعت البيانات من غير إيميل وباسورد (السيرفر هيتصرف)
         await addStudent({
           name: form.name,
-          username: form.username,
+          username: generatedUsername,
           phone: form.phone,
           grade: form.grade,
-          groupId: form.groupId,
           parentName: form.parentName || null,
           parentPhone: form.parentPhone || null,
         })
@@ -143,11 +122,6 @@ export default function StudentsPage() {
     }
   }
 
-  function groupName(id?: string | null) {
-    if (!id) return null
-    return groups.find((g) => g.id === id)?.name || null
-  }
-
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -164,13 +138,13 @@ export default function StudentsPage() {
 
       <Card>
         <CardContent className="p-5">
-          <div className="grid sm:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 gap-4">
             <div>
               <Label>بحث</Label>
               <div className="relative">
                 <Search className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[var(--color-ink-soft)]" />
                 <Input 
-                  placeholder="بالاسم، اسم المستخدم أو الهاتف..." 
+                  placeholder="بالاسم أو رقم الهاتف..." 
                   value={query} 
                   onChange={(e) => setQuery(e.target.value)} 
                   className="pr-10" 
@@ -190,20 +164,6 @@ export default function StudentsPage() {
                 ))}
               </select>
             </div>
-            <div>
-              <Label>المجموعة</Label>
-              <select
-                value={groupFilter}
-                onChange={(e) => setGroupFilter(e.target.value)}
-                className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
-              >
-                <option value="">كل المجموعات</option>
-                <option value="__none__">بدون مجموعة</option>
-                {groups.map((g) => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
-                ))}
-              </select>
-            </div>
           </div>
         </CardContent>
       </Card>
@@ -216,7 +176,6 @@ export default function StudentsPage() {
                 <tr className="border-b border-black/5 dark:border-[var(--color-dark-border)] text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
                   <th className="text-right font-semibold p-4">الطالب</th>
                   <th className="text-right font-semibold p-4 hidden md:table-cell">الصف</th>
-                  <th className="text-right font-semibold p-4 hidden xl:table-cell">المجموعة</th>
                   <th className="text-right font-semibold p-4 hidden sm:table-cell">الهاتف</th>
                   <th className="text-right font-semibold p-4">إجراءات</th>
                 </tr>
@@ -242,15 +201,6 @@ export default function StudentsPage() {
                         <GraduationCap className="h-3.5 w-3.5" /> {s.grade}
                       </span>
                     </td>
-                    <td className="p-4 hidden xl:table-cell text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
-                      {groupName(s.groupId) ? (
-                        <span className="inline-flex items-center gap-1.5">
-                          <Layers className="h-3.5 w-3.5" /> {groupName(s.groupId)}
-                        </span>
-                      ) : (
-                        <span className="text-xs opacity-50">—</span>
-                      )}
-                    </td>
                     <td className="p-4 hidden sm:table-cell text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]" dir="ltr">
                       {s.phone}
                     </td>
@@ -273,7 +223,7 @@ export default function StudentsPage() {
                 ))}
                 {filtered.length === 0 && (
                   <tr>
-                    <td colSpan={5} className="p-10 text-center text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
+                    <td colSpan={4} className="p-10 text-center text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
                       لا توجد نتائج مطابقة للبحث
                     </td>
                   </tr>
@@ -297,14 +247,10 @@ export default function StudentsPage() {
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
             </div>
             <div>
-              <Label>اسم المستخدم (للكارت)</Label>
-              <Input value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
-            </div>
-            <div>
               <Label>رقم الهاتف</Label>
               <Input dir="ltr" value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
             </div>
-            <div className="sm:col-span-2">
+            <div>
               <Label>الصف الدراسي</Label>
               <select
                 value={form.grade}
@@ -315,19 +261,6 @@ export default function StudentsPage() {
                   <option key={g} value={g}>
                     {g}
                   </option>
-                ))}
-              </select>
-            </div>
-            <div className="sm:col-span-2">
-              <Label>المجموعة (اختياري)</Label>
-              <select
-                value={form.groupId || ''}
-                onChange={(e) => setForm({ ...form, groupId: e.target.value || null })}
-                className="flex h-11 w-full rounded-xl border border-black/10 bg-white px-4 py-2 text-sm shadow-sm dark:bg-[var(--color-dark-surface-2)] dark:border-[var(--color-dark-border)]"
-              >
-                <option value="">بدون مجموعة</option>
-                {groups.map((g) => (
-                  <option key={g.id} value={g.id}>{g.name}</option>
                 ))}
               </select>
             </div>
