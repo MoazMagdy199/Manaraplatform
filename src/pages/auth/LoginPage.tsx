@@ -9,7 +9,7 @@ import { useToast } from '@/context/ToastContext'
 
 function getRolePath(role: string | undefined): string {
   if (role === 'Teacher') return '/teacher'
-  if (role === 'Assistant') return '/assistant'
+  if (role === 'Assistant') return '/teacher/attendance' // ✅ تم التعديل: كان '/assistant'
   return '/student'
 }
 
@@ -43,12 +43,12 @@ export default function LoginPage() {
     toast({
       title: 'اللهم صلِّ وسلم وبارك على نبينا محمد ﷺ',
       description: 'أهلاً بك في منارة.. رحلة التفوق تبدأ الآن',
-      variant: 'success', 
+      variant: 'success',
     })
 
     setTimeout(() => {
       navigate(getRolePath(res.user?.role))
-    }, 2000) 
+    }, 2000)
   }
 
   return (
