@@ -80,14 +80,16 @@ export default function StudentProfilePage() {
       pdf.setFillColor(255, 255, 255)
       pdf.rect(0, 0, 100, 150, 'F')
       
-      pdf.setDrawColor(19, 78, 74)
+      // 👈 غيرنا لون الإطار للأزرق
+      pdf.setDrawColor(29, 78, 216)
       pdf.setLineWidth(1)
       pdf.rect(5, 5, 90, 140)
 
       pdf.setFont("helvetica", "bold")
-      pdf.setFontSize(16)
-      pdf.setTextColor(19, 78, 74)
-      pdf.text("Manara Platform", 50, 20, { align: "center" })
+      pdf.setFontSize(14)
+      // 👈 غيرنا لون النص للأزرق
+      pdf.setTextColor(29, 78, 216)
+      pdf.text("Mr. Hossam Abdulbaki", 50, 20, { align: "center" })
       
       pdf.addImage(qrImgData, 'PNG', 20, 35, 60, 60)
       pdf.addImage(textImgData, 'PNG', 10, 100, 80, 20)
@@ -173,7 +175,7 @@ export default function StudentProfilePage() {
                   id="student-qr-canvas"
                   value={student.username || student.id} 
                   size={140}
-                  fgColor="#1d4ed8"
+                  fgColor="#1d4ed8" // 👈 غيرنا لون الـ QR للأزرق
                 />
               </div>
               <div className="flex-1 text-center sm:text-right">
