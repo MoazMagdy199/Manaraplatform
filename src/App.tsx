@@ -4,7 +4,7 @@ import { ThemeProvider } from '@/context/ThemeContext'
 import { DataProvider } from '@/context/DataContext'
 import { ToastProvider } from '@/context/ToastContext'
 import { ProtectedRoute } from '@/routes/ProtectedRoute'
-import { useAuth } from '@/context/AuthContext' // 👈 ضفنا دي
+import { useAuth } from '@/context/AuthContext'
 
 import LandingPage from '@/pages/public/LandingPage'
 import LoginPage from '@/pages/auth/LoginPage'
@@ -21,7 +21,7 @@ import ProfilePage from '@/pages/shared/ProfilePage'
 import SettingsPage from '@/pages/shared/SettingsPage'
 import AttendancePage from '@/pages/teacher/AttendancePage'
 
-// 👈 كومبوننت صغير عشان يوجه كل واحد حسب صلاحيته
+// 👈 كومبوننت ذكي بيوجه المساعد على طول لصفحة الحضور
 function TeacherIndexRedirect() {
   const { user } = useAuth()
   
@@ -45,7 +45,7 @@ function App() {
                 <Route
                   path="/teacher"
                   element={
-                    <ProtectedRoute role="Teacher">
+                    <ProtectedRoute role={['Teacher', 'Assistant']}>
                       <TeacherLayout />
                     </ProtectedRoute>
                   }
@@ -68,7 +68,6 @@ function App() {
 
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
-
             </BrowserRouter>
           </DataProvider>
         </AuthProvider>
