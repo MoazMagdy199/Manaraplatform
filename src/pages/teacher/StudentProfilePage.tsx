@@ -173,7 +173,7 @@ export default function StudentProfilePage() {
                   id="student-qr-canvas"
                   value={student.username || student.id} 
                   size={140}
-                  fgColor="#134e4a"
+                  fgColor="#1d4ed8"
                 />
               </div>
               <div className="flex-1 text-center sm:text-right">
