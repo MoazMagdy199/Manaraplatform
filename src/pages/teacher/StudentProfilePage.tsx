@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowRight, CalendarCheck, ClipboardCheck, Sparkles, Award, Clock, History, MessageCircle, AlertTriangle, Download } from 'lucide-react'
+import { ArrowRight, CalendarCheck, Award, MessageCircle, AlertTriangle, Download } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { useData } from '@/context/DataContext'
 import { useToast } from '@/context/ToastContext'
-import { initials, formatDateTime } from '@/lib/utils'
+import { initials } from '@/lib/utils'
 import {
   fetchStudentProfileSummary,
   checkConsecutiveAbsences,
@@ -15,20 +15,7 @@ import {
 
 import { QRCodeCanvas } from 'qrcode.react'
 import jsPDF from 'jspdf'
-import html2canvas from 'html2canvas' // 👈 ضفنا دي
-
-function timeAgo(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime()
-  const mins = Math.floor(diffMs / 60000)
-  if (mins < 1) return 'الآن'
-  if (mins < 60) return `منذ ${mins} دقيقة`
-  const hours = Math.floor(mins / 60)
-  if (hours < 24) return `منذ ${hours} ساعة`
-  const days = Math.floor(hours / 24)
-  if (days < 30) return `منذ ${days} يوم`
-  const months = Math.floor(days / 30)
-  return `منذ ${months} شهر`
-}
+import html2canvas from 'html2canvas'
 
 export default function StudentProfilePage() {
   const { id } = useParams<{ id: string }>()
@@ -61,7 +48,6 @@ export default function StudentProfilePage() {
   const downloadQRPdf = async () => {
     if (!student) return
 
-    // 1. نعمل عنصر مخفي عشان نحول النص العربي لصورة
     const textDiv = document.createElement('div')
     textDiv.style.position = 'absolute'
     textDiv.style.left = '-9999px'
@@ -79,15 +65,12 @@ export default function StudentProfilePage() {
     document.body.appendChild(textDiv)
 
     try {
-      // 2. نحول النص ده لصورة
       const canvasText = await html2canvas(textDiv, { scale: 2 })
       const textImgData = canvasText.toDataURL('image/png')
 
-      // 3. نجيب صورة الـ QR
       const qrCanvas = document.getElementById('student-qr-canvas') as HTMLCanvasElement
       const qrImgData = qrCanvas.toDataURL('image/png')
 
-      // 4. نعمل ملف الـ PDF
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
@@ -106,10 +89,7 @@ export default function StudentProfilePage() {
       pdf.setTextColor(19, 78, 74)
       pdf.text("Manara Platform", 50, 20, { align: "center" })
       
-      // نحط صورة الـ QR
       pdf.addImage(qrImgData, 'PNG', 20, 35, 60, 60)
-
-      // نحط صورة النص العربي (عرضها 80 مم وطولها متناسب معاها)
       pdf.addImage(textImgData, 'PNG', 10, 100, 80, 20)
 
       pdf.save(`QR_${student.username}.pdf`)
@@ -133,11 +113,11 @@ export default function StudentProfilePage() {
     }
 
     const message =
-      `السلام عليكم، معاك سكرتيرة مستر معاذ مجدي.\n\n` +
+      `السلام عليكم، معاك سكرتيرة مستر حسام عبد الباقي.\n\n` +
       `حبيت أبلغك إن ${student.name} غاب حصتين متتاليتين.\n\n` +
       `ياريت تتابع معاه عشان ميفوّتش حصص مهمة.\n\n` +
       `شكرًا لدعمكم ومتابعتكم. 🌹\n\n` +
-      `مع تحياتي،\nأ/ معاذ مجدي\nمدرس البرمجة`
+      `مع تحياتي،\nأ/ حسام عبد الباقي\nمدرس البرمجة`
 
     const url = `https://wa.me/${fullPhone}?text=${encodeURIComponent(message)}`
     window.open(url, '_blank')
@@ -212,7 +192,8 @@ export default function StudentProfilePage() {
 
           {summary ? (
             <>
-              <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              {/* 👈 كروت الإحصائيات (حضور + متوسط امتحانات) */}
+              <div className="grid sm:grid-cols-2 gap-4">
                 <Card>
                   <CardContent className="p-5">
                     <div className="h-9 w-9 rounded-xl bg-[var(--color-amber-100)] flex items-center justify-center mb-3">
@@ -222,28 +203,7 @@ export default function StudentProfilePage() {
                     <p className="text-sm text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1">الحضور</p>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardContent className="p-5">
-                    <div className="h-9 w-9 rounded-xl bg-[var(--color-brand-50)] dark:bg-[var(--color-brand-900)]/40 flex items-center justify-center mb-3">
-                      <ClipboardCheck className="h-4.5 w-4.5 text-[var(--color-brand-500)]" />
-                    </div>
-                    <p className="font-display text-2xl font-extrabold">
-                      {summary.homework.submitted} / {summary.homework.total}
-                    </p>
-                    <p className="text-sm text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1">الواجبات</p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardContent className="p-5">
-                    <div className="h-9 w-9 rounded-xl bg-[var(--color-indigo-300)]/25 flex items-center justify-center mb-3">
-                      <Sparkles className="h-4.5 w-4.5 text-[var(--color-indigo-500)]" />
-                    </div>
-                    <p className="font-display text-2xl font-extrabold">
-                      {summary.quiz.completed} / {summary.quiz.total}
-                    </p>
-                    <p className="text-sm text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)] mt-1">الاختبارات</p>
-                  </CardContent>
-                </Card>
+                
                 <Card>
                   <CardContent className="p-5">
                     <div className="h-9 w-9 rounded-xl bg-[var(--color-rose-100)] flex items-center justify-center mb-3">
@@ -258,36 +218,6 @@ export default function StudentProfilePage() {
                   </CardContent>
                 </Card>
               </div>
-
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="font-display font-bold text-lg mb-4 flex items-center gap-2">
-                    <History className="h-5 w-5 text-[var(--color-brand-500)]" /> آخر نشاط
-                  </h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-3 rounded-xl bg-black/[0.02] dark:bg-white/5 p-3.5">
-                      <Clock className="h-4 w-4 text-[var(--color-ink-soft)] shrink-0" />
-                      <div>
-                        <p className="text-sm font-semibold">آخر دخول</p>
-                        <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
-                          {summary.lastLogin ? `${timeAgo(summary.lastLogin)} (${formatDateTime(summary.lastLogin)})` : 'لم يسجّل دخول بعد'}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 rounded-xl bg-black/[0.02] dark:bg-white/5 p-3.5">
-                      <Sparkles className="h-4 w-4 text-[var(--color-ink-soft)] shrink-0" />
-                      <div>
-                        <p className="text-sm font-semibold">آخر اختبار</p>
-                        <p className="text-xs text-[var(--color-ink-soft)] dark:text-[var(--color-dark-ink-soft)]">
-                          {summary.lastQuiz
-                            ? `${summary.lastQuiz.title} — ${timeAgo(summary.lastQuiz.submittedAt)}`
-                            : 'لم يحلّ أي اختبار بعد'}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
 
               {hasConsecutiveAbsences && student.parentPhone && (
                 <Card className="border-rose-200 dark:border-rose-900/50">
