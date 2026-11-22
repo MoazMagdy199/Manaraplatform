@@ -6,6 +6,7 @@ import type {
   ScheduleDay,
   MyAttendanceSummary,
 } from '@/types'
+
 /** حضور كل طلاب صف معيّن في تاريخ معيّن (YYYY-MM-DD) */
 export async function fetchAttendanceForDate(
   grade: string,
@@ -48,7 +49,8 @@ export async function fetchAttendanceSummary(grade: string): Promise<AttendanceS
     absentCount: Number(r.absent_count),
   }))
 }
-/** ملخص حضور الطالب الحالي فقط */
+
+/** ملخص حضور الطالب الحالي فقط (لما الطالب هو اللي بيفتح حسابه) */
 export async function fetchMyAttendanceSummary(): Promise<MyAttendanceSummary> {
   const { data: userData } = await supabase.auth.getUser()
 
@@ -103,6 +105,59 @@ export async function fetchMyAttendanceSummary(): Promise<MyAttendanceSummary> {
     absencePercentage,
   }
 }
+
+/** 👈 الدالة الجديدة: ملخص حضور طالب معين عن طريق الـ ID بتاعه (للمدرس) */
+export async function fetchSpecificStudentAttendanceSummary(studentId: string): Promise<MyAttendanceSummary> {
+  const { data, error } = await supabase.rpc('get_student_attendance_summary_by_id', { 
+    p_student_id: studentId 
+  })
+
+  if (error) {
+    throw new Error(extractSupabaseError(error))
+  }
+
+  const row = data?.[0]
+
+  if (!row) {
+    return {
+      studentId: studentId,
+      name: '',
+      grade: null,
+      presentCount: 0,
+      absentCount: 0,
+      totalCount: 0,
+      attendancePercentage: 0,
+      absencePercentage: 0,
+    }
+  }
+
+  const presentCount = Number(row.present_count) || 0
+  const absentCount = Number(row.absent_count) || 0
+
+  const totalCount = presentCount + absentCount
+
+  const attendancePercentage =
+    totalCount > 0
+      ? Math.round((presentCount / totalCount) * 100)
+      : 0
+
+  const absencePercentage =
+    totalCount > 0
+      ? Math.round((absentCount / totalCount) * 100)
+      : 0
+
+  return {
+    studentId: row.student_id,
+    name: row.name ?? '',
+    grade: row.grade ?? null,
+    presentCount,
+    absentCount,
+    totalCount,
+    attendancePercentage,
+    absencePercentage,
+  }
+}
+
 // ---------- الجدول الأسبوعي (أي أيام فيها حصص لكل صف) ----------
 
 interface ScheduleRow {

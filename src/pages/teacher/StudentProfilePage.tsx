@@ -12,6 +12,8 @@ import {
   checkConsecutiveAbsences,
   type StudentProfileSummary,
 } from '@/services/studentProfileService'
+// 👈 استيراد الدالة الجديدة الخاصة بجلب حضور الطالب
+import { fetchSpecificStudentAttendanceSummary } from '@/services/attendanceService'
 
 import { QRCodeCanvas } from 'qrcode.react'
 import jsPDF from 'jspdf'
@@ -26,17 +28,26 @@ export default function StudentProfilePage() {
   const student = students.find((s) => s.id === id)
 
   const [summary, setSummary] = useState<StudentProfileSummary | null>(null)
+  // 👈 حالة جديدة لحفظ حضور الطالب
+  const [attendanceData, setAttendanceData] = useState<{ presentCount: number, absentCount: number } | null>(null)
   const [loading, setLoading] = useState(true)
   const [hasConsecutiveAbsences, setHasConsecutiveAbsences] = useState(false)
 
   useEffect(() => {
     if (!id) return
     setLoading(true)
+    
+    // 👈 جلب البيانات الثلاثة معاً (الحضور، ملخص الملف، الغياب المتتالي)
     Promise.all([
+      fetchSpecificStudentAttendanceSummary(id),
       fetchStudentProfileSummary(id),
       checkConsecutiveAbsences(id),
     ])
-      .then(([summaryData, absences]) => {
+      .then(([attData, summaryData, absences]) => {
+        setAttendanceData({ 
+          presentCount: attData.presentCount, 
+          absentCount: attData.absentCount 
+        })
         setSummary(summaryData)
         setHasConsecutiveAbsences(absences)
       })
@@ -80,14 +91,12 @@ export default function StudentProfilePage() {
       pdf.setFillColor(255, 255, 255)
       pdf.rect(0, 0, 100, 150, 'F')
       
-      // 👈 غيرنا لون الإطار للأزرق
       pdf.setDrawColor(29, 78, 216)
       pdf.setLineWidth(1)
       pdf.rect(5, 5, 90, 140)
 
       pdf.setFont("helvetica", "bold")
       pdf.setFontSize(14)
-      // 👈 غيرنا لون النص للأزرق
       pdf.setTextColor(29, 78, 216)
       pdf.text("Mr. Hossam Abdulbaki", 50, 20, { align: "center" })
       
@@ -133,8 +142,9 @@ export default function StudentProfilePage() {
     )
   }
 
-  const attTotal = summary ? summary.attendance.presentCount + summary.attendance.absentCount : 0
-  const attPct = attTotal > 0 ? Math.round((summary!.attendance.presentCount / attTotal) * 100) : null
+  // 👈 حساب نسبة الحضور بناءً على البيانات الجديدة
+  const attTotal = attendanceData ? attendanceData.presentCount + attendanceData.absentCount : 0
+  const attPct = attTotal > 0 ? Math.round((attendanceData!.presentCount / attTotal) * 100) : null
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -167,7 +177,7 @@ export default function StudentProfilePage() {
         </div>
       ) : (
         <>
-          {/* 👈 كارت الـ QR بتاع الطالب */}
+          {/* كارت الـ QR بتاع الطالب */}
           <Card className="border-[var(--color-brand-200)] bg-[var(--color-brand-50)]/30 dark:bg-[var(--color-brand-900)]/10 dark:border-[var(--color-brand-800)]">
             <CardContent className="p-6 flex flex-col sm:flex-row items-center gap-6">
               <div className="bg-white p-3 rounded-2xl shadow-sm border border-black/5">
@@ -175,7 +185,7 @@ export default function StudentProfilePage() {
                   id="student-qr-canvas"
                   value={student.username || student.id} 
                   size={140}
-                  fgColor="#1d4ed8" // 👈 غيرنا لون الـ QR للأزرق
+                  fgColor="#1d4ed8"
                 />
               </div>
               <div className="flex-1 text-center sm:text-right">
@@ -194,7 +204,7 @@ export default function StudentProfilePage() {
 
           {summary ? (
             <>
-              {/* 👈 كروت الإحصائيات (حضور + متوسط امتحانات) */}
+              {/* كروت الإحصائيات */}
               <div className="grid sm:grid-cols-2 gap-4">
                 <Card>
                   <CardContent className="p-5">
